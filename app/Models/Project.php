@@ -117,6 +117,13 @@ class Project extends Model
         return $this->hasMany(Label::class);
     }
 
+    /** @return HasMany<ActivityLog, $this> */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'subject_id')
+            ->where('subject_type', self::class);
+    }
+
     /**
      * @param  Builder<Project>  $query
      * @return Builder<Project>

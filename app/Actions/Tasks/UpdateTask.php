@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tasks;
 
+use App\Actions\Activity\RecordActivity;
 use App\Actions\Audit\RecordAuditLog;
 use App\Models\Task;
 use App\Models\User;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 final class UpdateTask
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
     /** @param array<string, mixed> $attributes */
     public function handle(User $actor, Task $task, array $attributes): Task
@@ -31,6 +32,7 @@ final class UpdateTask
                 before: $before,
                 after: $task->only(array_keys($attributes)),
             );
+            $this->recordActivity->handle($task, 'task.updated', $actor, $task->project->workspace, 'Task diperbarui.', ['fields' => array_keys($attributes)]);
 
             return $task->fresh(['project', 'assignee', 'requester', 'creator']);
         });

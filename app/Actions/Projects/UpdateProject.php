@@ -2,6 +2,7 @@
 
 namespace App\Actions\Projects;
 
+use App\Actions\Activity\RecordActivity;
 use App\Actions\Audit\RecordAuditLog;
 use App\Models\Project;
 use App\Models\User;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 final class UpdateProject
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
     /** @param array<string, mixed> $attributes */
     public function handle(User $actor, Project $project, array $attributes): Project
@@ -26,6 +27,7 @@ final class UpdateProject
                 before: $before,
                 after: $project->only(array_keys($before)),
             );
+            $this->recordActivity->handle($project, 'project.updated', $actor, $project->workspace, 'Project diperbarui.', ['fields' => array_keys($attributes)]);
 
             return $project->refresh();
         });

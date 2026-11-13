@@ -2,6 +2,7 @@
 
 namespace App\Actions\Projects;
 
+use App\Actions\Activity\RecordActivity;
 use App\Actions\Audit\RecordAuditLog;
 use App\Enums\ProjectRole;
 use App\Enums\ProjectStatus;
@@ -14,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 final class CreateProject
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
     /** @param array<string, mixed> $attributes */
     public function handle(User $creator, Workspace $workspace, array $attributes): Project
@@ -73,6 +74,7 @@ final class CreateProject
                 workspace: $workspace,
                 after: $project->only(['name', 'identifier', 'visibility', 'status', 'unit_id']),
             );
+            $this->recordActivity->handle($project, 'project.created', $creator, $workspace, 'Project dibuat.', ['identifier' => $project->identifier]);
 
             return $project->load(['unit', 'projectLead', 'defaultAssignee', 'memberships.user']);
         });

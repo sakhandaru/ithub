@@ -25,8 +25,9 @@
         tasks_count: number;
         is_read_only: boolean;
     };
+    type Activity = { id: string; description: string | null; action: string; created_at: string; actor: { id: number; name: string } | null };
 
-    let { workspace, project, canManage, canRestore }: { workspace: Workspace; project: Project; canManage: boolean; canRestore: boolean } = $props();
+    let { workspace, project, activities, canManage, canRestore }: { workspace: Workspace; project: Project; activities: Activity[]; canManage: boolean; canRestore: boolean } = $props();
 
     function confirmArchive(event: SubmitEvent): void {
         if (!window.confirm('Arsipkan Project ini? Data dan histori tetap dipertahankan.')) {
@@ -118,6 +119,14 @@
                         {/snippet}
                     </Button>
                 </div>
+            </div>
+            <div class="mt-8 border-t pt-6">
+                <h2 class="text-sm font-semibold">Activity Log Project</h2>
+                {#if activities.length === 0}
+                    <p class="mt-3 text-sm text-muted-foreground">Belum ada aktivitas Project.</p>
+                {:else}
+                    <ol class="mt-4 grid gap-3 border-l pl-4">{#each activities.slice(0, 8) as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {activity.created_at}</p></li>{/each}</ol>
+                {/if}
             </div>
         </section>
 

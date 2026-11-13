@@ -64,7 +64,7 @@ class ProjectController extends Controller
     public function show(Request $request, Workspace $workspace, Project $project): Response
     {
         Gate::authorize('view', $project);
-        $project->load(['unit', 'projectLead', 'defaultAssignee', 'creator', 'memberships.user']);
+        $project->load(['unit', 'projectLead', 'defaultAssignee', 'creator', 'memberships.user', 'activityLogs.actor']);
         $project->loadCount('tasks');
 
         return Inertia::render('projects/Show', [
@@ -79,6 +79,13 @@ class ProjectController extends Controller
                 'tasks_count' => $project->tasks_count,
                 'is_read_only' => $project->isArchived(),
             ],
+            'activities' => $project->activityLogs->sortByDesc('created_at')->values()->map(fn ($activity): array => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'created_at' => $activity->created_at->toIso8601String(),
+                'actor' => $activity->actor?->only(['id', 'name']),
+            ]),
             'canManage' => Gate::allows('update', $project),
             'canRestore' => Gate::allows('restore', $project),
         ]);

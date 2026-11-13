@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **70%**.
+Status saat ini: **80%**.
 
 Yang sudah tersedia:
 
@@ -44,7 +44,7 @@ Yang sudah tersedia:
 
 Yang belum tersedia:
 
-- komentar, attachment, bukti, Activity Log, dan Audit Log lengkap;
+- Board, dashboard Project, hardening, dan pilot Core;
 - komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
 - dashboard berbasis data;
@@ -472,6 +472,8 @@ Menyediakan alur harian create, assign, work, review, dan done melalui UI Plane-
 
 Progress: **70% sampai 80%**.
 
+Status: **selesai**.
+
 ### Tujuan
 
 Memberi Task konteks kerja dan keterlacakan yang menjadi outcome utama sitop.
@@ -522,6 +524,18 @@ Memberi Task konteks kerja dan keterlacakan yang menjadi outcome utama sitop.
 - Task memiliki komentar, attachment, bukti, dan histori nyata;
 - aturan Done dapat memakai bukti file, URL, atau catatan penyelesaian;
 - audit perubahan penting dapat ditelusuri ke actor dan waktu.
+
+### Implementasi dan keputusan Fase 6
+
+- Comment disimpan sebagai objek Task dengan actor, timestamp, dan authorization untuk create/update/delete.
+- Commenter dapat berkomentar dan mengunggah attachment, tetapi tidak dapat mengubah property atau status Task.
+- Attachment memakai disk privat `attachments`, metadata database, dan download melalui controller yang selalu melewati Policy.
+- File dibatasi oleh konfigurasi extension, MIME yang diizinkan, dan ukuran maksimum 10 MiB. Record tidak dibuat jika validasi gagal.
+- Kegagalan penyimpanan atau transaksi attachment menghapus file yang sudah terlanjur ditulis agar tidak meninggalkan file yatim.
+- Activity Log memakai subject polymorphic sederhana, actor, action, description, properties, dan request ID.
+- Audit Log mencatat perubahan penting Task, Project, assignment, status, attachment, membership, archive, dan restore.
+- Detail Task menampilkan komentar, attachment, Activity Log, serta bukti completion. Overview Project menampilkan Activity Log dan Project settings menampilkan Audit Log sesuai permission.
+- Penghapusan attachment dan komentar memakai authorization object-level serta mempertahankan histori Activity/Audit yang relevan.
 
 ## 12. Fase 7: Board, dashboard Project, hardening, dan pilot Core
 

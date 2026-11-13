@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tasks;
 
+use App\Actions\Activity\RecordActivity;
 use App\Actions\Audit\RecordAuditLog;
 use App\Enums\TaskStatus;
 use App\Models\Project;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 final class CreateTask
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
     /** @param array<string, mixed> $attributes */
     public function handle(User $creator, Project $project, array $attributes): Task
@@ -43,6 +44,7 @@ final class CreateTask
                     'status' => TaskStatus::Backlog->value,
                 ],
             );
+            $this->recordActivity->handle($task, 'task.created', $creator, $lockedProject->workspace, 'Task dibuat.', ['identifier' => $task->identifier]);
 
             return $task->load(['project', 'assignee', 'requester', 'creator']);
         });

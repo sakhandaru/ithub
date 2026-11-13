@@ -69,7 +69,7 @@ class TaskController extends Controller
     public function show(Request $request, Workspace $workspace, Project $project, Task $task): Response
     {
         Gate::authorize('view', $task);
-        $task->load(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color']);
+        $task->load(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color', 'comments.user', 'attachments.uploader', 'activityLogs.actor']);
         $members = $project->memberships()
             ->with('user:id,name,email')
             ->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])
@@ -81,12 +81,37 @@ class TaskController extends Controller
             'workspace' => $workspace->only(['id', 'name']),
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'task' => $this->taskSummary($task, true),
+            'comments' => $task->comments()->with('user')->get()->map(fn ($comment): array => [
+                'id' => $comment->id,
+                'body' => $comment->body,
+                'edited_at' => $comment->getRawOriginal('edited_at') ? CarbonImmutable::parse((string) $comment->getRawOriginal('edited_at'))->toIso8601String() : null,
+                'created_at' => $comment->created_at?->toIso8601String(),
+                'user' => $comment->user?->only(['id', 'name', 'email']),
+                'can_delete' => $comment->user_id === $request->user()->getKey() || $request->user()->can('update', $task),
+            ])->values(),
+            'attachments' => $task->attachments()->with('uploader')->get()->map(fn ($attachment): array => [
+                'id' => $attachment->id,
+                'original_name' => $attachment->original_name,
+                'mime_type' => $attachment->mime_type,
+                'size' => $attachment->size,
+                'created_at' => $attachment->created_at?->toIso8601String(),
+                'uploader' => $attachment->uploader?->only(['id', 'name']),
+            ])->values(),
+            'activities' => $task->activityLogs()->with('actor')->latest('created_at')->get()->map(fn ($activity): array => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'created_at' => $activity->created_at->toIso8601String(),
+                'actor' => $activity->actor?->only(['id', 'name']),
+            ])->values(),
             'members' => $members,
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'canUpdate' => $request->user()->can('update', $task),
             'canTransition' => $request->user()->can('transition', $task),
             'canAssign' => $request->user()->can('assign', $task),
+            'canComment' => $request->user()->can('comment', $task),
+            'canAttach' => $request->user()->can('attach', $task),
         ]);
     }
 
@@ -143,8 +168,8 @@ class TaskController extends Controller
             'blocked_reason' => $detail ? $task->blocked_reason : null,
             'canceled_reason' => $detail ? $task->canceled_reason : null,
             'reopen_reason' => $detail ? $task->reopen_reason : null,
-            'created_at' => $task->created_at?->toIso8601String(),
-            'updated_at' => $task->updated_at?->toIso8601String(),
+            'created_at' => $task->created_at->toIso8601String(),
+            'updated_at' => $task->updated_at->toIso8601String(),
             'is_completed' => $task->isCompleted(),
         ];
     }

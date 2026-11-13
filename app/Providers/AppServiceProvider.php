@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Attachment;
+use App\Models\Comment;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Workspace;
@@ -59,6 +61,20 @@ class AppServiceProvider extends ServiceProvider
                 ->whereBelongsTo($project)
                 ->visibleTo($user)
                 ->findOrFail($value);
+        });
+
+        Route::bind('comment', function (string $value): Comment {
+            $task = request()->route('task');
+            abort_unless($task instanceof Task, 404);
+
+            return $task->comments()->findOrFail($value);
+        });
+
+        Route::bind('attachment', function (string $value): Attachment {
+            $task = request()->route('task');
+            abort_unless($task instanceof Task, 404);
+
+            return $task->attachments()->findOrFail($value);
         });
     }
 

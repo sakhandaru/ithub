@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tasks;
 
+use App\Actions\Activity\RecordActivity;
 use App\Actions\Audit\RecordAuditLog;
 use App\Enums\ProjectRole;
 use App\Models\Task;
@@ -11,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 final class AssignTask
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
     public function handle(User $actor, Task $task, ?User $assignee): Task
     {
@@ -36,6 +37,7 @@ final class AssignTask
                 before: $before,
                 after: ['assignee_id' => $task->assignee_id],
             );
+            $this->recordActivity->handle($task, 'task.assignee.updated', $actor, $task->project->workspace, 'PIC Task diperbarui.', ['assignee_id' => $task->assignee_id]);
 
             return $task->fresh(['assignee']);
         });

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tasks;
 
+use App\Actions\Activity\RecordActivity;
 use App\Actions\Audit\RecordAuditLog;
 use App\Enums\TaskStatus;
 use App\Models\Task;
@@ -23,7 +24,7 @@ final class TransitionTask
         'canceled' => [],
     ];
 
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
     public function handle(User $actor, Task $task, TaskStatus $target, ?string $reason = null, ?string $completionNote = null, ?string $evidenceUrl = null): Task
     {
@@ -63,6 +64,7 @@ final class TransitionTask
                 before: ['status' => $current->value],
                 after: ['status' => $target->value, 'reason' => $reason],
             );
+            $this->recordActivity->handle($task, 'task.status.changed', $actor, $task->project->workspace, 'Status Task diperbarui.', ['from' => $current->value, 'to' => $target->value]);
 
             return $task->fresh();
         });

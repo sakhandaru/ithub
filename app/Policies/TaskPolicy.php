@@ -38,9 +38,29 @@ class TaskPolicy
         return ! $task->project->isArchived() && $this->isProjectAdmin($user, $task->project);
     }
 
+    public function comment(User $user, Task $task): bool
+    {
+        return ! $task->project->isArchived() && $this->canCommentInProject($user, $task->project);
+    }
+
+    public function attach(User $user, Task $task): bool
+    {
+        return $this->comment($user, $task);
+    }
+
     private function canWorkInProject(User $user, Project $project): bool
     {
         return $this->isProjectAdmin($user, $project) || $this->isContributor($user, $project);
+    }
+
+    private function canCommentInProject(User $user, Project $project): bool
+    {
+        return $this->workspaceIsAdmin($user, $project)
+            || $project->memberships()->where('user_id', $user->getKey())->whereIn('role', [
+                ProjectRole::ProjectAdmin->value,
+                ProjectRole::Contributor->value,
+                ProjectRole::Commenter->value,
+            ])->exists();
     }
 
     private function isProjectAdmin(User $user, Project $project): bool

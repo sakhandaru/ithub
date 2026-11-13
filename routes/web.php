@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ActiveWorkspaceController;
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectArchiveController;
 use App\Http\Controllers\ProjectController;
@@ -55,6 +57,11 @@ Route::middleware(array_merge(['auth'], config('fortify.email_verification') ? [
             Route::patch('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
             Route::patch('tasks/{task}/assignee', [TaskController::class, 'assign'])->name('tasks.assign');
             Route::post('tasks/{task}/transition', TaskTransitionController::class)->name('tasks.transition');
+            Route::post('tasks/{task}/comments', [CommentController::class, 'store'])->name('tasks.comments.store');
+            Route::delete('tasks/{task}/comments/{comment}', [CommentController::class, 'destroy'])->name('tasks.comments.destroy');
+            Route::post('tasks/{task}/attachments', [AttachmentController::class, 'store'])->name('tasks.attachments.store');
+            Route::get('tasks/{task}/attachments/{attachment}', [AttachmentController::class, 'download'])->name('tasks.attachments.download');
+            Route::delete('tasks/{task}/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('tasks.attachments.destroy');
         });
     });
 });

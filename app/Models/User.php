@@ -103,6 +103,18 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasMany(Task::class, 'created_by_id');
     }
 
+    /** @return HasMany<Comment, $this> */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /** @return HasMany<Attachment, $this> */
+    public function uploadedAttachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class, 'uploaded_by_id');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

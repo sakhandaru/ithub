@@ -13,6 +13,8 @@
     import ClipboardList from '@lucide/svelte/icons/clipboard-list';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import TaskTransitionController from '@/actions/App/Http/Controllers/TaskTransitionController';
+    import CommentController from '@/actions/App/Http/Controllers/CommentController';
+    import AttachmentController from '@/actions/App/Http/Controllers/AttachmentController';
     import AppHead from '@/components/AppHead.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Badge } from '@/components/ui/badge';
@@ -34,10 +36,14 @@
         reopen_reason: string | null; labels: Array<{ id: string; name: string; color: string | null }>;
         created_at: string | null; updated_at: string | null;
     };
+    type CommentItem = { id: string; body: string; created_at: string | null; user: Person | null; can_delete: boolean };
+    type AttachmentItem = { id: string; original_name: string; mime_type: string; size: number; created_at: string | null; uploader: Person | null };
+    type ActivityItem = { id: string; action: string; description: string | null; created_at: string | null; actor: Person | null };
 
-    let { workspace, project, task, members, statuses, priorities, canUpdate, canTransition, canAssign }: {
+    let { workspace, project, task, members, statuses, priorities, comments, attachments, activities, canUpdate, canTransition, canAssign, canComment, canAttach }: {
         workspace: Workspace; project: Project; task: Task; members: Person[];
         statuses: Option[]; priorities: Option[]; canUpdate: boolean; canTransition: boolean; canAssign: boolean;
+        comments: CommentItem[]; attachments: AttachmentItem[]; activities: ActivityItem[]; canComment: boolean; canAttach: boolean;
     } = $props();
 </script>
 
@@ -87,6 +93,50 @@
                     </Form>
                 </section>
             {/if}
+
+            <section class="rounded-lg border bg-card p-5 sm:p-6">
+                <h2 class="text-sm font-semibold">Komentar</h2>
+                {#if canComment}
+                    <Form {...CommentController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-3">
+                        {#snippet children({ errors, processing })}
+                            <textarea name="body" rows={4} maxlength={10000} placeholder="Tulis konteks atau pembaruan..." class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
+                            <InputError message={errors.body} />
+                            <div class="flex justify-end"><Button type="submit" disabled={processing}>{processing ? 'Menambahkan...' : 'Tambah komentar'}</Button></div>
+                        {/snippet}
+                    </Form>
+                {/if}
+                <div class="mt-6 grid gap-4 border-t pt-5">
+                    {#if comments.length === 0}
+                        <p class="text-sm text-muted-foreground">Belum ada komentar.</p>
+                    {:else}
+                        {#each comments as comment (comment.id)}
+                            <article class="rounded-md border bg-muted/20 p-4">
+                                <div class="flex items-center justify-between gap-3"><p class="text-sm font-medium">{comment.user?.name ?? 'Pengguna'}</p>{#if comment.can_delete}<Form {...CommentController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, comment: comment.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</div>
+                                <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{comment.body}</p>
+                                <p class="mt-2 text-xs text-muted-foreground">{comment.created_at ?? ''}</p>
+                            </article>
+                        {/each}
+                    {/if}
+                </div>
+            </section>
+
+            <section class="rounded-lg border bg-card p-5 sm:p-6">
+                <h2 class="text-sm font-semibold">Bukti dan attachment</h2>
+                {#if canAttach}
+                    <Form {...AttachmentController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end" enctype="multipart/form-data">
+                        {#snippet children({ errors, processing })}
+                            <div class="min-w-0 flex-1"><Label for="task-attachment">File</Label><Input id="task-attachment" name="file" type="file" class="mt-2 min-h-11" /><InputError message={errors.file} /></div>
+                            <Button type="submit" variant="outline" disabled={processing}>{processing ? 'Mengunggah...' : 'Unggah file'}</Button>
+                        {/snippet}
+                    </Form>
+                {/if}
+                {#if attachments.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada attachment.</p>{:else}<ul class="mt-5 grid gap-2 border-t pt-5">{#each attachments as attachment (attachment.id)}<li class="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-3 text-sm"><div><a href={toUrl(AttachmentController.download({ workspace: workspace.id, project: project.id, task: task.id, attachment: attachment.id }))} class="font-medium hover:underline">{attachment.original_name}</a><p class="mt-1 text-xs text-muted-foreground">{attachment.mime_type} · {attachment.uploader?.name ?? 'Pengguna'}</p></div>{#if canUpdate}<Form {...AttachmentController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, attachment: attachment.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</li>{/each}</ul>{/if}
+            </section>
+
+            <section class="rounded-lg border bg-card p-5 sm:p-6">
+                <h2 class="text-sm font-semibold">Activity Log</h2>
+                {#if activities.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada aktivitas.</p>{:else}<ol class="mt-5 grid gap-4 border-l pl-4">{#each activities as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {activity.created_at ?? ''}</p></li>{/each}</ol>{/if}
+            </section>
         </div>
 
         <aside class="rounded-lg border bg-card p-5">

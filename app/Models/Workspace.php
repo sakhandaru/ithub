@@ -57,6 +57,13 @@ class Workspace extends Model
         return $this->hasMany(AuditLog::class);
     }
 
+    /** @return HasMany<ActivityLog, $this> */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'subject_id')
+            ->where('subject_type', self::class);
+    }
+
     /**
      * @param  Builder<Workspace>  $query
      * @return Builder<Workspace>

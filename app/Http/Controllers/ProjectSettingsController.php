@@ -22,6 +22,9 @@ class ProjectSettingsController extends Controller
     {
         Gate::authorize('view', $project);
         $project->load(['unit', 'memberships.user']);
+        $auditLogs = Gate::allows('update', $project)
+            ? $project->auditLogs()->with('actor')->latest('created_at')->get()
+            : collect();
 
         return Inertia::render('projects/Settings', [
             'workspace' => $workspace->only(['id', 'name']),
@@ -48,6 +51,13 @@ class ProjectSettingsController extends Controller
             'visibilities' => collect(ProjectVisibility::cases())->map(fn (ProjectVisibility $visibility): array => ['value' => $visibility->value, 'label' => $visibility->label()]),
             'canManage' => Gate::allows('update', $project),
             'canRestore' => Gate::allows('restore', $project),
+            'auditLogs' => $auditLogs->map(fn ($auditLog): array => [
+                'id' => $auditLog->id,
+                'action' => $auditLog->action,
+                'created_at' => $auditLog->created_at->toIso8601String(),
+                'actor' => $auditLog->actor?->only(['id', 'name']),
+            ])->values(),
+            'canViewAudit' => Gate::allows('update', $project),
         ]);
     }
 

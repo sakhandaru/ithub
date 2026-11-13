@@ -33,6 +33,7 @@
         status: string;
         archived: boolean;
     };
+    type AuditLog = { id: string; action: string; created_at: string; actor: { id: number; name: string } | null };
 
     let {
         workspace,
@@ -40,6 +41,8 @@
         units,
         members,
         projectMembers,
+        auditLogs,
+        canViewAudit,
         roles,
         statuses,
         visibilities,
@@ -51,6 +54,8 @@
         units: Unit[];
         members: Person[];
         projectMembers: ProjectMember[];
+        auditLogs: AuditLog[];
+        canViewAudit: boolean;
         roles: ProjectOption[];
         statuses: ProjectOption[];
         visibilities: ProjectOption[];
@@ -153,6 +158,14 @@
                 {/if}
             </div>
         </section>
+
+    {#if canViewAudit}
+        <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <h2 class="text-base font-semibold">Audit Log</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Perubahan penting Project dan membership.</p>
+            {#if auditLogs.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada Audit Log.</p>{:else}<ol class="mt-5 grid gap-3 border-l pl-4">{#each auditLogs as log (log.id)}<li><p class="text-sm font-medium">{log.action}</p><p class="mt-1 text-xs text-muted-foreground">{log.actor?.name ?? 'Sistem'} · {log.created_at}</p></li>{/each}</ol>{/if}
+        </section>
+    {/if}
 
         <section class="rounded-lg border bg-card p-5 sm:p-6">
             <h2 class="text-base font-semibold">Anggota Project</h2>
