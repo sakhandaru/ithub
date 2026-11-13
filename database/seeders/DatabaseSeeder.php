@@ -17,6 +17,7 @@ use App\Models\Label;
 use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskRelation;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\TaskNotification;
@@ -57,6 +58,9 @@ class DatabaseSeeder extends Seeder
             'development' => $this->createProject($owner, $workspace, $units['Development']->id, 'Portal Layanan Internal', 'PORTAL', 'Pengembangan portal layanan internal untuk seluruh unit.', $developer, 'active', '2026-12-20'),
             'infra' => $this->createProject($owner, $workspace, $units['Infra']->id, 'Modernisasi Infrastruktur', 'INFRA', 'Modernisasi monitoring, backup, dan kapasitas infrastruktur.', $infra, 'active', '2026-11-30'),
             'operations' => $this->createProject($owner, $workspace, $units['Operasional']->id, 'Digitalisasi Operasional TI', 'OPS', 'Merapikan alur permintaan dan dokumentasi operasional TI.', $operations, 'active', '2027-01-15'),
+            'service' => $this->createProject($owner, $workspace, $units['Operasional']->id, 'Service Desk Improvement', 'SDESK', 'Meningkatkan kecepatan dan keterlacakan layanan pengguna.', $operations, 'active', '2026-12-05'),
+            'security' => $this->createProject($owner, $workspace, $units['Infra']->id, 'Security Hardening', 'SEC', 'Menutup gap keamanan dan memperkuat kontrol akses internal.', $infra, 'active', '2026-12-12'),
+            'procurement' => $this->createProject($owner, $workspace, $units['Operasional']->id, 'Pengadaan Perangkat Kerja', 'PROC', 'Mengelola kebutuhan perangkat kerja untuk kuartal berikutnya.', $owner, 'draft', '2027-02-01'),
             'completed' => $this->createProject($owner, $workspace, $units['Development']->id, 'Pilot Knowledge Base', 'KNOW', 'Project contoh yang sudah selesai dan siap diarsipkan.', $developer, 'completed', '2026-09-30'),
         ];
 
@@ -71,6 +75,9 @@ class DatabaseSeeder extends Seeder
         $this->seedDevelopment($owner, $developer, $reviewer, $projects['development']);
         $this->seedInfra($owner, $infra, $reviewer, $projects['infra']);
         $this->seedOperations($owner, $operations, $reviewer, $projects['operations']);
+        $this->seedVolume($owner, $reviewer, $projects['service'], [$operations, $developer], ['Triage request pengguna', 'Review SLA response', 'Klasifikasi request berulang', 'Perbarui template jawaban', 'Susun laporan mingguan', 'Validasi eskalasi vendor', 'Audit backlog helpdesk', 'Uji alur approval', 'Dokumentasikan FAQ', 'Review kepuasan pengguna', 'Buat dashboard service desk', 'Serah terima shift support'], ['Request', 'SLA', 'Support']);
+        $this->seedVolume($owner, $reviewer, $projects['security'], [$infra, $developer], ['Review akses admin', 'Rotasi secret aplikasi', 'Scan dependency vulnerability', 'Simulasi incident response', 'Validasi MFA akun privileged', 'Review log authentication', 'Perbarui security baseline', 'Uji backup credential', 'Audit permission Project', 'Dokumentasi threat model', 'Tindak lanjut finding audit', 'Security review release'], ['Security', 'Audit', 'Risk']);
+        $this->seedVolume($owner, $reviewer, $projects['procurement'], [$owner, $operations], ['Kumpulkan kebutuhan laptop', 'Bandingkan penawaran vendor', 'Validasi spesifikasi workstation', 'Susun estimasi anggaran', 'Review kontrak maintenance', 'Buat matriks prioritas', 'Minta persetujuan pengadaan', 'Dokumentasikan keputusan vendor', 'Siapkan berita acara', 'Update daftar kebutuhan unit'], ['Procurement', 'Vendor', 'Budget']);
         $this->seedCompleted($owner, $developer, $projects['completed']);
 
         $owner->forceFill(['active_workspace_id' => $workspace->id])->save();
@@ -164,6 +171,41 @@ class DatabaseSeeder extends Seeder
         $task = $this->task($owner, $project, 'Serah terima knowledge base', $developer, 'medium', 'done', null, '2026-09-20');
         $task->update(['completion_note' => 'Serah terima selesai.', 'completed_at' => now()->subMonths(2)]);
         app(ArchiveProject::class)->handle($owner, $project->fresh());
+    }
+
+    /**
+     * @param  list<User>  $assignees
+     * @param  list<string>  $titles
+     * @param  list<string>  $labelNames
+     */
+    private function seedVolume(User $owner, User $reviewer, Project $project, array $assignees, array $titles, array $labelNames): void
+    {
+        $labels = $this->labels($project, array_map(fn (string $name): array => [$name, ['blue', 'green', 'orange'][array_rand(['blue', 'green', 'orange'])]], $labelNames));
+        $statuses = ['backlog', 'todo', 'in_progress', 'in_review', 'done', 'blocked', 'canceled'];
+        $priorities = ['low', 'medium', 'medium', 'high', 'urgent'];
+        $createdTasks = [];
+        foreach ($titles as $index => $title) {
+            $assignee = $assignees[$index % count($assignees)];
+            $status = $statuses[$index % count($statuses)];
+            $task = $this->task($owner, $project, $title, $assignee, $priorities[$index % count($priorities)], $status, null, fake()->dateTimeBetween('-14 days', '+45 days')->format('Y-m-d'));
+            $task->labels()->sync([$labels[$index % count($labels)]->id]);
+            if ($status === 'done') {
+                $task->update(['completion_note' => 'Selesai dan diverifikasi pada data demo.', 'completed_at' => now()->subDays($index + 1)]);
+            }
+            if ($status === 'blocked') {
+                $task->update(['blocked_reason' => 'Menunggu informasi atau persetujuan lintas unit.']);
+            }
+            if ($status === 'canceled') {
+                $task->update(['canceled_reason' => 'Tidak lagi menjadi prioritas pada siklus ini.']);
+            }
+            if ($index % 3 === 0) {
+                app(CreateComment::class)->handle($reviewer, $task, 'Catatan review demo untuk memperlihatkan kolaborasi Task.');
+            }
+            $createdTasks[] = $task;
+        }
+        foreach (array_slice($createdTasks, 1, 4) as $relatedTask) {
+            TaskRelation::create(['project_id' => $project->id, 'task_id' => $createdTasks[0]->id, 'related_task_id' => $relatedTask->id, 'type' => 'related']);
+        }
     }
 
     /** @param array<int, array{0: string, 1: string}> $definitions */
