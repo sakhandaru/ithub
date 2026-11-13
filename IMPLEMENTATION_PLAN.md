@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **15%**.
+Status saat ini: **25%**.
 
 Yang sudah tersedia:
 
@@ -36,14 +36,18 @@ Yang sudah tersedia:
 - enum dasar role, visibility, status, dan priority;
 - request context untuk actor, request ID, dan timezone;
 - konfigurasi attachment privat dan batas file;
-- keputusan teknis fondasi domain untuk fase berikutnya.
+- keputusan teknis fondasi domain untuk fase berikutnya;
+- Workspace, Unit, membership, role, dan active Workspace;
+- halaman onboarding dan pengaturan Workspace;
+- authorization backend dan isolasi direct-object;
+- Audit Log minimum untuk perubahan membership dan Unit.
 
 Yang belum tersedia:
 
-- model Workspace, Unit, Project, Task, dan membership;
-- role dan authorization domain;
+- model Project, Task, dan membership Project;
+- role dan authorization Project;
 - workflow Project dan Task;
-- komentar, attachment, bukti, Activity Log, dan Audit Log;
+- komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
 - dashboard berbasis data;
 - Global Search, filter lanjutan, dan notifikasi;
@@ -179,6 +183,8 @@ Menyiapkan batas teknis yang akan dipakai semua domain agar Workspace, Project, 
 
 Progress: **15% sampai 25%**.
 
+Status: **selesai**.
+
 ### Tujuan
 
 Membuat scope akses utama sebelum data Project dan Task dibuat.
@@ -227,6 +233,18 @@ Membuat scope akses utama sebelum data Project dan Task dibuat.
 - role Workspace bekerja di backend dan UI;
 - tiga Unit awal tersedia tanpa bergantung pada data palsu;
 - seluruh test permission dan direct-object reference lulus.
+
+### Implementasi dan keputusan Fase 2
+
+- User tanpa Workspace diarahkan ke onboarding dan dapat membuat Workspace sendiri sebagai Owner.
+- Pembuatan Workspace memakai satu transaction boundary dan langsung membuat Unit `Development`, `Infra`, dan `Operasional`.
+- Anggota Workspace ditambahkan dari user yang sudah terdaftar. Undangan email eksternal belum dibuat pada fase ini.
+- Owner dan Workspace Admin dapat mengelola anggota serta Unit. Unit tidak memiliki role khusus pada MVP.
+- Owner adalah satu-satunya role yang dapat memberikan atau mengubah role Owner. Owner terakhir tidak dapat diturunkan atau dihapus.
+- Workspace yang tidak diikuti user tidak dikonfirmasi keberadaannya melalui direct URL dan mengembalikan `404`.
+- Workspace aktif disimpan pada preferensi user dan ditampilkan di context sidebar tingkat kedua.
+- Pengaturan Workspace menggabungkan General, anggota, role, Unit, dan timezone dalam satu halaman responsif.
+- Audit Log minimum mencatat pembuatan Workspace, perubahan Workspace, perubahan role, penambahan/penghapusan anggota, serta perubahan Unit.
 
 ## 8. Fase 3: Project dan lifecycle Project
 

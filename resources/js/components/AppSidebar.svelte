@@ -7,15 +7,18 @@
     import Settings from '@lucide/svelte/icons/settings';
     import ShieldCheck from '@lucide/svelte/icons/shield-check';
     import UserRound from '@lucide/svelte/icons/user-round';
+    import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.svelte';
     import type { Snippet } from 'svelte';
     import NavUser from '@/components/NavUser.svelte';
     import { Sidebar, useSidebar } from '@/components/ui/sidebar';
     import { currentUrlState } from '@/lib/currentUrl.svelte';
-    import { toUrl } from '@/lib/utils';
     import { dashboard } from '@/routes';
     import { edit as editAppearance } from '@/routes/appearance';
     import { edit as editProfile } from '@/routes/profile';
     import { edit as editSecurity } from '@/routes/security';
+    import WorkspaceSettingsController from '@/actions/App/Http/Controllers/WorkspaceSettingsController';
+    import { page } from '@inertiajs/svelte';
+    import { toUrl } from '@/lib/utils';
 
     let {
         children,
@@ -25,7 +28,9 @@
 
     const url = currentUrlState();
     const { isMobile, setOpenMobile } = useSidebar();
-    const isSettings = $derived(url.currentUrl.startsWith('/settings'));
+    const workspaceContext = $derived(page.props.workspaceContext);
+    const isWorkspaceSettings = $derived(url.currentUrl.startsWith('/workspaces/') && url.currentUrl.endsWith('/settings'));
+    const isSettings = $derived(url.currentUrl.startsWith('/settings') || isWorkspaceSettings);
 
     function closeMobileNavigation(): void {
         if ($isMobile) {
@@ -95,17 +100,31 @@
         <div
             class="flex min-w-0 flex-1 flex-col bg-sidebar group-data-[collapsible=icon]:hidden"
         >
-            <div class="flex h-12 shrink-0 items-center border-b border-sidebar-border px-4">
-                <span class="truncate text-sm font-semibold tracking-tight">sitop</span>
+            <div class="shrink-0 border-b border-sidebar-border p-2">
+                <div class="flex items-center gap-2 px-2.5 pb-2">
+                    <span class="text-sm font-bold tracking-tight">ST</span>
+                    <span class="text-sm font-semibold tracking-tight">sitop</span>
+                </div>
+                <WorkspaceSwitcher />
             </div>
 
             <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4">
                 {#if isSettings}
                     <p class="px-2 pb-2 text-xs font-medium text-muted-foreground">
-                        Pengaturan akun
+                        {isWorkspaceSettings ? 'Pengaturan Workspace' : 'Pengaturan akun'}
                     </p>
-                    <nav class="grid gap-1" aria-label="Pengaturan akun">
-                        <Link
+                    <nav class="grid gap-1" aria-label={isWorkspaceSettings ? 'Pengaturan Workspace' : 'Pengaturan akun'}>
+                        {#if isWorkspaceSettings && workspaceContext.active}
+                            <Link
+                                href={toUrl(WorkspaceSettingsController.show(workspaceContext.active.id))}
+                                class="flex min-h-10 items-center gap-3 rounded-md bg-sidebar-accent px-2.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current="page"
+                                onclick={closeMobileNavigation}
+                            >
+                                Workspace
+                            </Link>
+                        {:else}
+                            <Link
                             href={toUrl(editProfile())}
                             class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.isCurrentUrl(
                                 editProfile(),
@@ -120,8 +139,8 @@
                         >
                             <UserRound class="size-4" aria-hidden="true" />
                             Profil
-                        </Link>
-                        <Link
+                            </Link>
+                            <Link
                             href={toUrl(editSecurity())}
                             class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.isCurrentUrl(
                                 editSecurity(),
@@ -136,8 +155,8 @@
                         >
                             <ShieldCheck class="size-4" aria-hidden="true" />
                             Keamanan
-                        </Link>
-                        <Link
+                            </Link>
+                            <Link
                             href={toUrl(editAppearance())}
                             class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.isCurrentUrl(
                                 editAppearance(),
@@ -152,7 +171,8 @@
                         >
                             <Palette class="size-4" aria-hidden="true" />
                             Tampilan
-                        </Link>
+                            </Link>
+                        {/if}
                     </nav>
                 {:else}
                     <p class="px-2 pb-2 text-xs font-medium text-muted-foreground">
@@ -178,6 +198,16 @@
                             <FolderKanban class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                             <p class="text-xs leading-5">Belum ada project.</p>
                         </div>
+                        {#if workspaceContext.active?.can_manage}
+                            <Link
+                                href={toUrl(WorkspaceSettingsController.show(workspaceContext.active.id))}
+                                class="mt-3 flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                onclick={closeMobileNavigation}
+                            >
+                                <Settings class="size-4" aria-hidden="true" />
+                                Pengaturan Workspace
+                            </Link>
+                        {/if}
                     </div>
                 {/if}
             </div>

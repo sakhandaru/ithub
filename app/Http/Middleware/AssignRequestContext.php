@@ -18,11 +18,12 @@ class AssignRequestContext
     public function handle(Request $request, Closure $next): Response
     {
         $requestId = Str::ulid()->toBase32();
+        $timezone = $request->user()?->activeWorkspace()->value('timezone');
 
         RequestContext::assign(
             requestId: $requestId,
             actorId: $request->user()?->getAuthIdentifier(),
-            timezone: (string) config('sitop.default_timezone'),
+            timezone: is_string($timezone) ? $timezone : (string) config('sitop.default_timezone'),
         );
 
         $response = $next($request);

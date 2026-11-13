@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { WorkspaceContext } from '@/types/workspace';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -22,6 +23,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            workspaceContext: WorkspaceContext;
             [key: string]: unknown;
         };
     }

@@ -16,6 +16,9 @@
     import FolderKanban from '@lucide/svelte/icons/folder-kanban';
     import ListChecks from '@lucide/svelte/icons/list-checks';
     import AppHead from '@/components/AppHead.svelte';
+    import type { WorkspaceSummary } from '@/types';
+
+    let { workspace }: { workspace: Pick<WorkspaceSummary, 'id' | 'name' | 'timezone'> } = $props();
 </script>
 
 <AppHead title="Beranda" />
@@ -24,7 +27,7 @@
     <header class="mb-6">
         <h1 class="text-xl font-semibold tracking-tight">Beranda</h1>
         <p class="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Pekerjaan yang ditugaskan kepada Anda dan hal yang perlu ditindaklanjuti.
+            Ringkasan pekerjaan di {workspace.name}.
         </p>
     </header>
 

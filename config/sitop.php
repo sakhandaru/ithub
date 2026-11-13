@@ -7,6 +7,13 @@ return [
         'domain_primary_key' => 'ulid',
     ],
 
+    'workspace_timezones' => [
+        'Asia/Jakarta',
+        'Asia/Makassar',
+        'Asia/Jayapura',
+        'UTC',
+    ],
+
     'attachments' => [
         'disk' => env('SITOP_ATTACHMENTS_DISK', 'attachments'),
         'max_size_kilobytes' => (int) env('SITOP_ATTACHMENT_MAX_SIZE_KB', 10240),

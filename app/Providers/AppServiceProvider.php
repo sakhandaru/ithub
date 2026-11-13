@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +26,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Route::bind('workspace', function (string $value): Workspace {
+            $user = request()->user();
+
+            abort_unless($user !== null, 404);
+
+            return Workspace::query()->visibleTo($user)->findOrFail($value);
+        });
     }
 
     /**
