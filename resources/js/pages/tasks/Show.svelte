@@ -17,6 +17,7 @@
     import AttachmentController from '@/actions/App/Http/Controllers/AttachmentController';
     import TaskRelationController from '@/actions/App/Http/Controllers/TaskRelationController';
     import AppHead from '@/components/AppHead.svelte';
+    import ProjectContextNav from '@/components/ProjectContextNav.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
@@ -62,6 +63,8 @@
         </div>
         <div class="flex flex-wrap gap-2"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}</div>
     </header>
+
+    <ProjectContextNav {workspace} {project} active="tasks" />
 
     {#if project.archived_at}
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan. Task bersifat read-only sampai Project dipulihkan.</div>

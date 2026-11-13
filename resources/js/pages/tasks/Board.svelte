@@ -13,6 +13,7 @@
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import TaskTransitionController from '@/actions/App/Http/Controllers/TaskTransitionController';
     import AppHead from '@/components/AppHead.svelte';
+    import ProjectContextNav from '@/components/ProjectContextNav.svelte';
     import { Badge } from '@/components/ui/badge';
     import { toUrl } from '@/lib/utils';
 
@@ -75,6 +76,7 @@
         <div><p class="text-sm text-muted-foreground">{project.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Board</h1><p class="mt-1 text-sm text-muted-foreground">Pindahkan Task berdasarkan workflow Project.</p></div>
         <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} class="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link>
     </header>
+    <ProjectContextNav {workspace} {project} active="board" />
     {#if project.archived_at}<div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan dan Board bersifat read-only.</div>{/if}
 
     <div class="flex gap-4 overflow-x-auto pb-3" aria-label="Board Task">

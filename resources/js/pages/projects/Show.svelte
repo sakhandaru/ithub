@@ -10,6 +10,7 @@
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import AppHead from '@/components/AppHead.svelte';
+    import ProjectContextNav from '@/components/ProjectContextNav.svelte';
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
     import { toUrl } from '@/lib/utils';
@@ -85,6 +86,8 @@
             {/if}
         </div>
     </header>
+
+    <ProjectContextNav {workspace} {project} active="overview" />
 
     {#if project.archived}
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">

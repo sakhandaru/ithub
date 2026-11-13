@@ -16,6 +16,7 @@
     import ListTodo from '@lucide/svelte/icons/list-todo';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import AppHead from '@/components/AppHead.svelte';
+    import ProjectContextNav from '@/components/ProjectContextNav.svelte';
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
     import { toUrl } from '@/lib/utils';
@@ -34,6 +35,7 @@
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
     <header class="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-sm text-muted-foreground">{project.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Dashboard Project</h1><p class="mt-1 text-sm text-muted-foreground">{project.name}</p></div><Button variant="outline" class="min-h-10" asChild>{#snippet children(props)}<Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} {...props}>Lihat semua Task</Link>{/snippet}</Button></header>
+    <ProjectContextNav {workspace} {project} active="dashboard" />
     {#if project.archived_at}<div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan.</div>{/if}
 
     <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
