@@ -5,6 +5,7 @@
     import LayoutGrid from '@lucide/svelte/icons/layout-grid';
     import Menu from '@lucide/svelte/icons/menu';
     import Search from '@lucide/svelte/icons/search';
+    import Bell from '@lucide/svelte/icons/bell';
     import AppLogo from '@/components/AppLogo.svelte';
     import AppLogoIcon from '@/components/AppLogoIcon.svelte';
     import Breadcrumbs from '@/components/Breadcrumbs.svelte';
@@ -43,6 +44,8 @@
     import { getInitials } from '@/lib/initials';
     import { toUrl } from '@/lib/utils';
     import { dashboard } from '@/routes';
+    import { search } from '@/routes';
+    import { index as notificationsIndex } from '@/routes/notifications';
     import type { BreadcrumbItem, NavItem } from '@/types';
 
     let {
@@ -53,6 +56,7 @@
 
     const auth = $derived(page.props.auth);
     const url = currentUrlState();
+    const unreadCount = $derived(page.props.notifications?.unread_count ?? 0);
 
     const activeItemStyles =
         'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
@@ -187,15 +191,12 @@
 
             <div class="ml-auto flex items-center space-x-2">
                 <div class="relative flex items-center space-x-1">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        class="group h-9 w-9 cursor-pointer"
-                    >
+                    <Link href={toUrl(search())} class="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent" aria-label="Pencarian">
                         <Search
                             class="size-5 opacity-80 group-hover:opacity-100"
                         />
-                    </Button>
+                    </Link>
+                    <Link href={toUrl(notificationsIndex())} class="relative inline-flex size-9 items-center justify-center rounded-md hover:bg-accent" aria-label="Notifikasi"><Bell class="size-5 opacity-80" />{#if unreadCount > 0}<span class="absolute right-1 top-1 size-2 rounded-full bg-destructive" aria-label={`${unreadCount} notifikasi belum dibaca`}></span>{/if}</Link>
 
                     <div class="hidden space-x-1 lg:flex">
                         {#each rightNavItems as item (toUrl(item.href))}

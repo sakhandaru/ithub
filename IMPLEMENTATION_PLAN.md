@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **91%**.
+Status saat ini: **97%**.
 
 Yang sudah tersedia:
 
@@ -672,6 +672,17 @@ Status: **selesai**.
 
 Progress: **91% sampai 97%**.
 
+Status: **selesai**.
+
+### Hasil implementasi
+
+- Dashboard Workspace berbasis data untuk Task saya, overdue, Blocked, Task aktif, dan ringkasan Project;
+- Global Search untuk Project dan Task dengan query scope Workspace serta permission Project;
+- filter Task untuk PIC, Milestone, tanpa deadline, dan tanpa bukti, selain status, priority, dan pencarian;
+- notifikasi in-app berbasis database untuk assignment, komentar baru, dan perubahan status;
+- unread count pada header, daftar notifikasi, tautan objek, dan mark as read;
+- test dashboard dan search, termasuk validasi scope akses.
+
 ### Dashboard Workspace
 
 - Task saya;
@@ -936,7 +947,7 @@ Setiap batch idealnya cukup kecil untuk ditinjau dan diuji secara mandiri.
 - [ ] Fase 6: Kolaborasi, bukti, Activity Log, dan Audit Log, 80%.
 - [ ] Fase 7: Board, dashboard Project, hardening, dan pilot Core, 85%.
 - [x] Fase 8: Sub-task, relasi, dan milestone, 91%.
-- [ ] Fase 9: Dashboard Workspace, search, filter, dan notifikasi, 97%.
+- [x] Fase 9: Dashboard Workspace, search, filter, dan notifikasi, 97%.
 - [ ] Fase 10: State lengkap, archive lanjutan, optimasi, dan pilot akhir, 100%.
 
 ## 20. Aturan perubahan rencana

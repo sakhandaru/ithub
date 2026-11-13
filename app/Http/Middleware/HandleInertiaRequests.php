@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'workspaceContext' => fn (): array => $this->workspaceContext($request->user()),
             'projectContext' => fn (): array => $this->projectContext($request->route('project')),
+            'notifications' => fn (): array => $request->user() ? ['unread_count' => $request->user()->unreadNotifications()->count()] : ['unread_count' => 0],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

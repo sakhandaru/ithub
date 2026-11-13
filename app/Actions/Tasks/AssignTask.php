@@ -7,6 +7,7 @@ use App\Actions\Audit\RecordAuditLog;
 use App\Enums\ProjectRole;
 use App\Models\Task;
 use App\Models\User;
+use App\Notifications\TaskNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -38,6 +39,9 @@ final class AssignTask
                 after: ['assignee_id' => $task->assignee_id],
             );
             $this->recordActivity->handle($task, 'task.assignee.updated', $actor, $task->project->workspace, 'PIC Task diperbarui.', ['assignee_id' => $task->assignee_id]);
+            if ($assignee && ! $assignee->is($actor)) {
+                $assignee->notify(new TaskNotification('assignment', 'Task ditugaskan kepada Anda', $task->identifier.' · '.$task->title, route('workspaces.projects.tasks.show', [$task->project->workspace, $task->project, $task])));
+            }
 
             return $task->fresh(['assignee']);
         });

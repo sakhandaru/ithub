@@ -1,80 +1,19 @@
 <script module lang="ts">
     import { dashboard } from '@/routes';
-
-    export const layout = {
-        breadcrumbs: [
-            {
-                title: 'Beranda',
-                href: dashboard(),
-            },
-        ],
-    };
+    export const layout = { breadcrumbs: [{ title: 'Beranda', href: dashboard() }] };
 </script>
-
 <script lang="ts">
-    import Activity from '@lucide/svelte/icons/activity';
-    import FolderKanban from '@lucide/svelte/icons/folder-kanban';
-    import ListChecks from '@lucide/svelte/icons/list-checks';
+    import { Link } from '@inertiajs/svelte';
     import AppHead from '@/components/AppHead.svelte';
-    import type { WorkspaceSummary } from '@/types';
-
-    let { workspace }: { workspace: Pick<WorkspaceSummary, 'id' | 'name' | 'timezone'> } = $props();
+    import { Badge } from '@/components/ui/badge';
+    import { toUrl } from '@/lib/utils';
+    import TaskController from '@/actions/App/Http/Controllers/TaskController';
+    import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
+    type Workspace = { id: string; name: string; timezone: string };
+    type Task = { id: string; identifier: string; title: string; project_id: string; status?: string; due_date?: string | null };
+    type Project = { id: string; name: string; identifier: string; unit: string | null; tasks: number };
+    let { workspace, stats, projects, myTasks, overdueTasks, blockedTasks }: { workspace: Workspace; stats: { my_tasks: number; overdue: number; blocked: number; active: number }; projects: Project[]; myTasks: Task[]; overdueTasks: Task[]; blockedTasks: Task[] } = $props();
+    const taskUrl = (task: Task): string => toUrl(TaskController.show({ workspace: workspace.id, project: task.project_id, task: task.id }));
 </script>
-
 <AppHead title="Beranda" />
-
-<div class="flex min-h-0 flex-1 flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-    <header class="mb-6">
-        <h1 class="text-xl font-semibold tracking-tight">Beranda</h1>
-        <p class="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Ringkasan pekerjaan di {workspace.name}.
-        </p>
-    </header>
-
-    <div class="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section class="flex min-h-80 flex-col rounded-lg border bg-card">
-            <div class="border-b px-4 py-3 sm:px-5">
-                <div class="flex items-center gap-2">
-                    <ListChecks class="size-4 text-muted-foreground" aria-hidden="true" />
-                    <h2 class="text-sm font-semibold">Pekerjaan saya</h2>
-                </div>
-            </div>
-
-            <div class="flex flex-1 items-center justify-center px-6 py-12 text-center">
-                <div class="max-w-sm">
-                    <div
-                        class="mx-auto flex size-10 items-center justify-center rounded-md border bg-muted/40"
-                    >
-                        <ListChecks class="size-5 text-muted-foreground" aria-hidden="true" />
-                    </div>
-                    <h3 class="mt-4 text-sm font-medium">Belum ada task</h3>
-                    <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                        Task yang ditugaskan kepada Anda akan muncul di sini setelah modul project diaktifkan.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <div class="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <section class="rounded-lg border bg-card">
-                <div class="flex items-center gap-2 border-b px-4 py-3">
-                    <FolderKanban class="size-4 text-muted-foreground" aria-hidden="true" />
-                    <h2 class="text-sm font-semibold">Project</h2>
-                </div>
-                <div class="px-4 py-5">
-                    <p class="text-sm text-muted-foreground">Belum ada project di workspace ini.</p>
-                </div>
-            </section>
-
-            <section class="rounded-lg border bg-card">
-                <div class="flex items-center gap-2 border-b px-4 py-3">
-                    <Activity class="size-4 text-muted-foreground" aria-hidden="true" />
-                    <h2 class="text-sm font-semibold">Aktivitas terbaru</h2>
-                </div>
-                <div class="px-4 py-5">
-                    <p class="text-sm text-muted-foreground">Belum ada aktivitas untuk ditampilkan.</p>
-                </div>
-            </section>
-        </div>
-    </div>
-</div>
+<div class="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8"><header><p class="text-sm text-muted-foreground">Workspace</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">{workspace.name}</h1><p class="mt-1 text-sm text-muted-foreground">Ringkasan pekerjaan yang perlu mendapat perhatian.</p></header><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{#each [['my_tasks', 'Task saya'], ['overdue', 'Terlambat'], ['blocked', 'Blocked'], ['active', 'Task aktif']] as item}<div class="rounded-lg border bg-card p-4"><p class="text-sm text-muted-foreground">{item[1]}</p><p class="mt-2 text-2xl font-semibold">{stats[item[0] as keyof typeof stats]}</p></div>{/each}</div><div class="grid gap-6 xl:grid-cols-2"><section class="rounded-lg border bg-card"><div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Task saya</h2></div>{#if myTasks.length === 0}<p class="px-4 py-8 text-sm text-muted-foreground">Tidak ada Task aktif yang ditugaskan kepada Anda.</p>{:else}<div class="divide-y">{#each myTasks as task (task.id)}<Link href={taskUrl(task)} class="block px-4 py-3 hover:bg-muted/40"><p class="font-mono text-xs text-muted-foreground">{task.identifier}</p><p class="mt-1 text-sm font-medium">{task.title}</p><p class="mt-1 text-xs text-muted-foreground">{task.due_date ? `Deadline ${task.due_date}` : 'Tanpa deadline'}</p></Link>{/each}</div>{/if}</section><section class="rounded-lg border bg-card"><div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Project</h2></div>{#if projects.length === 0}<p class="px-4 py-8 text-sm text-muted-foreground">Belum ada Project.</p>{:else}<div class="divide-y">{#each projects as project (project.id)}<Link href={toUrl(ProjectController.show({ workspace: workspace.id, project: project.id }))} class="flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted/40"><div><p class="font-mono text-xs text-muted-foreground">{project.identifier}</p><p class="mt-1 text-sm font-medium">{project.name}</p><p class="mt-1 text-xs text-muted-foreground">{project.unit ?? 'Tanpa Unit'}</p></div><Badge variant="outline">{project.tasks} Task</Badge></Link>{/each}</div>{/if}</section><section class="rounded-lg border bg-card"><div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Terlambat</h2></div>{#if overdueTasks.length === 0}<p class="px-4 py-8 text-sm text-muted-foreground">Tidak ada Task terlambat.</p>{:else}<div class="divide-y">{#each overdueTasks as task (task.id)}<Link href={taskUrl(task)} class="block px-4 py-3 hover:bg-muted/40"><p class="text-sm font-medium">{task.identifier} · {task.title}</p><p class="mt-1 text-xs text-destructive">Deadline {task.due_date}</p></Link>{/each}</div>{/if}</section><section class="rounded-lg border bg-card"><div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Blocked</h2></div>{#if blockedTasks.length === 0}<p class="px-4 py-8 text-sm text-muted-foreground">Tidak ada Task Blocked.</p>{:else}<div class="divide-y">{#each blockedTasks as task (task.id)}<Link href={taskUrl(task)} class="block px-4 py-3 hover:bg-muted/40"><p class="text-sm font-medium">{task.identifier} · {task.title}</p></Link>{/each}</div>{/if}</section></div></div>

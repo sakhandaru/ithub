@@ -31,6 +31,9 @@ class TaskController extends Controller
         Gate::authorize('view', $project);
         $status = $request->string('status')->toString();
         $priority = $request->string('priority')->toString();
+        $assignee = $request->string('assignee')->toString();
+        $requester = $request->string('requester')->toString();
+        $milestone = $request->string('milestone')->toString();
         $search = trim($request->string('search')->toString());
         $sort = $request->string('sort', 'created_at')->toString();
         $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
@@ -39,6 +42,11 @@ class TaskController extends Controller
             ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
             ->when($status !== '', fn ($query) => $query->where('status', $status))
             ->when($priority !== '', fn ($query) => $query->where('priority', $priority))
+            ->when($assignee !== '', fn ($query) => $query->where('assignee_id', $assignee === 'none' ? null : $assignee))
+            ->when($requester !== '', fn ($query) => $query->where('requester_id', $requester))
+            ->when($milestone !== '', fn ($query) => $query->where('milestone_id', $milestone === 'none' ? null : $milestone))
+            ->when($request->boolean('no_deadline'), fn ($query) => $query->whereNull('due_date'))
+            ->when($request->boolean('no_evidence'), fn ($query) => $query->whereNull('completion_note')->whereNull('evidence_url'))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search): void {
                 $searchQuery->where('title', 'like', "%{$search}%")
                     ->orWhere('identifier', 'like', "%{$search}%");
@@ -60,9 +68,11 @@ class TaskController extends Controller
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'selectedTask' => $selectedTask ? $this->taskSummary($selectedTask, true) : null,
-            'filters' => ['status' => $status, 'priority' => $priority, 'search' => $search, 'sort' => $sort, 'direction' => $direction],
+            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
+            'filterMembers' => $project->memberships()->with('user:id,name')->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name])->values(),
+            'filterMilestones' => $project->milestones()->orderBy('name')->get(['id', 'name']),
             'canCreate' => $request->user()->can('create', [Task::class, $project]),
             'canManage' => $request->user()->can('update', $selectedTask ?? $project),
         ]);

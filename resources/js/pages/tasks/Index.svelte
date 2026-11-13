@@ -30,10 +30,11 @@
         due_date: string | null; completed_at: string | null;
     };
 
-    let { workspace, project, tasks, selectedTask, filters, statuses, priorities, canCreate }: {
+    type Member = { id: number; name: string }; type Milestone = { id: string; name: string };
+    let { workspace, project, tasks, selectedTask, filters, statuses, priorities, filterMembers, filterMilestones, canCreate }: {
         workspace: Workspace; project: Project; tasks: Task[]; selectedTask: Task | null;
-        filters: { status: string; priority: string; search: string; sort: string; direction: string };
-        statuses: Option[]; priorities: Option[]; canCreate: boolean;
+        filters: { status: string; priority: string; assignee: string; requester: string; milestone: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
+        statuses: Option[]; priorities: Option[]; filterMembers: Member[]; filterMilestones: Milestone[]; canCreate: boolean;
     } = $props();
 
     const taskListUrl = (query: Record<string, string | number | undefined> = {}): string =>
@@ -42,7 +43,7 @@
     function closePeek(): string {
         return taskListUrl({
             status: filters.status || undefined, priority: filters.priority || undefined,
-            search: filters.search || undefined, sort: filters.sort || undefined,
+            assignee: filters.assignee || undefined, requester: filters.requester || undefined, milestone: filters.milestone || undefined, no_deadline: filters.no_deadline ? 1 : undefined, no_evidence: filters.no_evidence ? 1 : undefined, search: filters.search || undefined, sort: filters.sort || undefined,
             direction: filters.direction || undefined,
         });
     }
@@ -92,6 +93,10 @@
             </div>
             <div><Label for="task-status">Status</Label><select id="task-status" name="status" value={filters.status} class="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Semua status</option>{#each statuses as status (status.value)}<option value={status.value}>{status.label}</option>{/each}</select></div>
             <div><Label for="task-priority">Priority</Label><select id="task-priority" name="priority" value={filters.priority} class="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Semua priority</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select></div>
+            <div><Label for="task-assignee">PIC</Label><select id="task-assignee" name="assignee" value={filters.assignee} class="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Semua PIC</option><option value="none">Tanpa PIC</option>{#each filterMembers as member (member.id)}<option value={member.id}>{member.name}</option>{/each}</select></div>
+            <div><Label for="task-milestone">Milestone</Label><select id="task-milestone" name="milestone" value={filters.milestone} class="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Semua milestone</option><option value="none">Tanpa milestone</option>{#each filterMilestones as milestone (milestone.id)}<option value={milestone.id}>{milestone.name}</option>{/each}</select></div>
+            <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="no_deadline" value="1" checked={filters.no_deadline} />Tanpa deadline</label>
+            <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="no_evidence" value="1" checked={filters.no_evidence} />Tanpa bukti</label>
             <Button type="submit" variant="outline" class="min-h-11"><Filter class="size-4" aria-hidden="true" />Filter</Button>
             <Link href={taskListUrl()} class="min-h-10 text-sm text-muted-foreground hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring">Reset filter</Link>
         </form>

@@ -7,6 +7,7 @@ use App\Actions\Audit\RecordAuditLog;
 use App\Enums\TaskStatus;
 use App\Models\Task;
 use App\Models\User;
+use App\Notifications\TaskNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -65,6 +66,8 @@ final class TransitionTask
                 after: ['status' => $target->value, 'reason' => $reason],
             );
             $this->recordActivity->handle($task, 'task.status.changed', $actor, $task->project->workspace, 'Status Task diperbarui.', ['from' => $current->value, 'to' => $target->value]);
+            $recipients = collect([$task->assignee, $task->requester, $task->creator])->filter()->unique('id')->reject(fn (User $user): bool => $user->is($actor));
+            $recipients->each(fn (User $user) => $user->notify(new TaskNotification('status', 'Status Task berubah', $task->identifier.' sekarang '.$target->label(), route('workspaces.projects.tasks.show', [$task->project->workspace, $task->project, $task]))));
 
             return $task->fresh();
         });

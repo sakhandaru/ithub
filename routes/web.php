@@ -5,10 +5,12 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MilestoneController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectArchiveController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectSettingsController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskRelationController;
 use App\Http\Controllers\TaskTransitionController;
@@ -23,6 +25,9 @@ Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(array_merge(['auth'], config('fortify.email_verification') ? ['verified'] : []))->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('search', SearchController::class)->name('search');
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
     Route::get('workspaces/create', [WorkspaceController::class, 'create'])->name('workspaces.create');
     Route::post('workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
