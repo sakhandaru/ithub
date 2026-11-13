@@ -185,6 +185,20 @@
             {:else}
                 <dl class="mt-5 grid gap-4 text-sm"><div><dt class="text-xs text-muted-foreground">PIC Task</dt><dd class="mt-1 font-medium">{task.assignee?.name ?? 'Belum ada PIC'}</dd></div></dl>
             {/if}
+            {#if canUpdate}
+                <Form {...TaskController.update.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-6 grid gap-3 border-t pt-5">
+                    {#snippet children({ errors, processing })}
+                        <div>
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Properti cepat</h3>
+                            <p class="mt-1 text-xs text-muted-foreground">Perbarui konteks tanpa kembali ke form utama.</p>
+                        </div>
+                        <div class="grid gap-2"><Label for="context-priority">Priority</Label><select id="context-priority" name="priority" value={task.priority ?? ''} class="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tidak ada</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select><InputError message={errors.priority} /></div>
+                        <div class="grid gap-2"><Label for="context-due-date">Deadline</Label><Input id="context-due-date" name="due_date" type="date" value={task.due_date ?? ''} /><InputError message={errors.due_date} /></div>
+                        <div class="grid gap-2"><Label for="context-milestone">Milestone</Label><select id="context-milestone" name="milestone_id" value={task.milestone?.id ?? ''} class="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tanpa milestone</option>{#each milestones as milestone (milestone.id)}<option value={milestone.id}>{milestone.name}</option>{/each}</select><InputError message={errors.milestone_id} /></div>
+                        <Button type="submit" variant="outline" disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan properti'}</Button>
+                    {/snippet}
+                </Form>
+            {/if}
             <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{task.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat oleh</dt><dd class="mt-1 font-medium">{task.creator?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Deadline</dt><dd class="mt-1 font-medium">{task.due_date ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat</dt><dd class="mt-1 font-medium">{task.created_at ?? '—'}</dd></div></dl>
         </aside>
     </div>
