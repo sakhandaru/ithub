@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'created_by_id',
     'start_date',
     'target_date',
+    'next_task_number',
     'archived_at',
     'archived_by_id',
 ])]
@@ -102,6 +103,18 @@ class Project extends Model
     {
         return $this->hasMany(AuditLog::class, 'auditable_id')
             ->where('auditable_type', self::class);
+    }
+
+    /** @return HasMany<Task, $this> */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /** @return HasMany<Label, $this> */
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
     }
 
     /**

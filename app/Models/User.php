@@ -85,6 +85,24 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             ->withTimestamps();
     }
 
+    /** @return HasMany<Task, $this> */
+    public function assignedTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assignee_id');
+    }
+
+    /** @return HasMany<Task, $this> */
+    public function requestedTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'requester_id');
+    }
+
+    /** @return HasMany<Task, $this> */
+    public function createdTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'created_by_id');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

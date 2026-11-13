@@ -12,4 +12,18 @@ enum TaskStatus: string
     case Done = 'done';
     case Blocked = 'blocked';
     case Canceled = 'canceled';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Request => 'Permintaan',
+            self::Backlog => 'Backlog',
+            self::Todo => 'Todo',
+            self::InProgress => 'In Progress',
+            self::InReview => 'In Review',
+            self::Done => 'Done',
+            self::Blocked => 'Blocked',
+            self::Canceled => 'Canceled',
+        };
+    }
 }

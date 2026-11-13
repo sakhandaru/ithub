@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -44,6 +45,18 @@ class AppServiceProvider extends ServiceProvider
 
             return Project::query()
                 ->whereBelongsTo($workspace)
+                ->visibleTo($user)
+                ->findOrFail($value);
+        });
+
+        Route::bind('task', function (string $value): Task {
+            $user = request()->user();
+            $project = request()->route('project');
+
+            abort_unless($user !== null && $project instanceof Project, 404);
+
+            return Task::query()
+                ->whereBelongsTo($project)
                 ->visibleTo($user)
                 ->findOrFail($value);
         });

@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **40%**.
+Status saat ini: **58%**.
 
 Yang sudah tersedia:
 
@@ -44,8 +44,8 @@ Yang sudah tersedia:
 
 Yang belum tersedia:
 
-- model Task dan membership Task;
-- workflow Project dan Task;
+- Task List, detail, dan side peek penuh;
+- komentar, attachment, bukti, Activity Log, dan Audit Log lengkap;
 - komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
 - dashboard berbasis data;
@@ -324,6 +324,8 @@ Menyediakan konteks utama tempat Task dan resource kerja dikelola.
 
 Progress: **40% sampai 58%**.
 
+Status: **selesai**.
+
 ### Tujuan
 
 Menyelesaikan aturan bisnis inti Task sebelum membangun tampilan List dan Board yang kompleks.
@@ -385,6 +387,19 @@ Menyelesaikan aturan bisnis inti Task sebelum membangun tampilan List dan Board 
 - seluruh workflow Task dapat dijalankan melalui backend;
 - aturan Done, Blocked, Canceled, dan Reopen tidak dapat dilewati dari request langsung;
 - test permission dan concurrency identifier lulus.
+
+### Implementasi dan keputusan Fase 4
+
+- Task memakai ULID sebagai primary key dan nomor integer berurutan yang dikunci pada row Project saat pembuatan.
+- Identifier Task berbentuk `{PROJECT_ID}-{NUMBER}` dan tidak memakai counter global lintas Project.
+- Task baru selalu berstatus `Backlog`, requester default adalah creator, dan Default Assignee Project diterapkan bila tersedia.
+- PIC hanya dapat berasal dari Project Admin atau Contributor pada Project yang sama. Assignment memiliki endpoint khusus untuk assign dan unassign.
+- Workflow legal divalidasi dalam action transition terpisah. `Blocked`, `Canceled`, dan reopen ke `In Progress` membutuhkan alasan.
+- Status `Done` membutuhkan completion note atau evidence URL dan mengisi `completed_at`.
+- Contributor dapat membuat Task dan mengubah Task yang ditugaskan atau dibuat olehnya. Project Admin dapat mengelola seluruh Task.
+- Label Project dan relasi Task-Label sudah tersedia melalui create/update payload; CRUD UI Label ditunda sampai kebutuhan layar kerja digunakan di fase berikutnya.
+- Custom route binding memastikan Task tidak dapat diakses lintas Project, Workspace, atau visibility scope.
+- Audit Log minimum mencatat pembuatan Task, perubahan Task, assignment, dan transition status.
 
 ## 10. Fase 5: List, detail, dan side peek Task
 
