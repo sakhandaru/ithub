@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Actions\Projects;
+
+use App\Actions\Audit\RecordAuditLog;
+use App\Models\Project;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+final class UpdateProject
+{
+    public function __construct(private RecordAuditLog $recordAuditLog) {}
+
+    /** @param array<string, mixed> $attributes */
+    public function handle(User $actor, Project $project, array $attributes): Project
+    {
+        return DB::transaction(function () use ($actor, $project, $attributes): Project {
+            $before = $project->only(['name', 'description', 'visibility', 'status', 'unit_id', 'project_lead_id', 'default_assignee_id', 'start_date', 'target_date']);
+            $project->update($attributes);
+
+            $this->recordAuditLog->handle(
+                auditable: $project,
+                action: 'project.updated',
+                actor: $actor,
+                workspace: $project->workspace,
+                before: $before,
+                after: $project->only(array_keys($before)),
+            );
+
+            return $project->refresh();
+        });
+    }
+}

@@ -42,4 +42,10 @@ class Unit extends Model
             ->withPivot(['id', 'added_by_id'])
             ->withTimestamps();
     }
+
+    /** @return HasMany<Project, $this> */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
 }

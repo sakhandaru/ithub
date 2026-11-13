@@ -45,6 +45,12 @@ class Workspace extends Model
         return $this->hasMany(Unit::class);
     }
 
+    /** @return HasMany<Project, $this> */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
+
     /** @return HasMany<AuditLog, $this> */
     public function auditLogs(): HasMany
     {

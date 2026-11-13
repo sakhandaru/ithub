@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **25%**.
+Status saat ini: **40%**.
 
 Yang sudah tersedia:
 
@@ -44,8 +44,7 @@ Yang sudah tersedia:
 
 Yang belum tersedia:
 
-- model Project, Task, dan membership Project;
-- role dan authorization Project;
+- model Task dan membership Task;
 - workflow Project dan Task;
 - komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
@@ -250,6 +249,8 @@ Membuat scope akses utama sebelum data Project dan Task dibuat.
 
 Progress: **25% sampai 40%**.
 
+Status: **selesai**.
+
 ### Tujuan
 
 Menyediakan konteks utama tempat Task dan resource kerja dikelola.
@@ -306,6 +307,18 @@ Menyediakan konteks utama tempat Task dan resource kerja dikelola.
 - Project list dan overview memakai data nyata;
 - context sidebar berubah mengikuti Project aktif;
 - seluruh aturan visibility dan role diuji.
+
+### Implementasi dan keputusan Fase 3
+
+- Project memakai ULID dan Project ID yang unik dalam satu Workspace.
+- Creator otomatis menjadi Project Admin dan Project Lead. Project Lead adalah designation, bukan permission tambahan.
+- Default Assignee boleh kosong; jika diisi, user harus anggota Workspace dan otomatis ditambahkan sebagai Contributor bila belum menjadi anggota Project.
+- Visibility diterapkan pada query scope dan route binding backend untuk Workspace, Unit, dan Private. Akses lintas scope menghasilkan `404`.
+- Project Admin adalah role membership yang mengelola konfigurasi dan anggota. Project Lead tidak otomatis menjadi Project Admin.
+- Project yang diarsipkan hanya boleh berstatus Completed atau Canceled, menyimpan metadata archive, dan menjadi read-only sampai dipulihkan.
+- Project membership melindungi Project Admin terakhir agar tidak dapat dihapus atau diturunkan.
+- Project list, create, overview, settings, members, archive, dan restore sudah memakai data nyata serta Wayfinder.
+- Audit Log minimum mencatat pembuatan, perubahan, archive, restore, dan perubahan membership Project.
 
 ## 9. Fase 4: Task engine dan workflow
 

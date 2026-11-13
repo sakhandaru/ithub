@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Project;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -33,6 +34,18 @@ class AppServiceProvider extends ServiceProvider
             abort_unless($user !== null, 404);
 
             return Workspace::query()->visibleTo($user)->findOrFail($value);
+        });
+
+        Route::bind('project', function (string $value): Project {
+            $user = request()->user();
+            $workspace = request()->route('workspace');
+
+            abort_unless($user !== null && $workspace instanceof Workspace, 404);
+
+            return Project::query()
+                ->whereBelongsTo($workspace)
+                ->visibleTo($user)
+                ->findOrFail($value);
         });
     }
 

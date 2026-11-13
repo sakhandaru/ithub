@@ -71,6 +71,20 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             ->withTimestamps();
     }
 
+    /** @return HasMany<ProjectMembership, $this> */
+    public function projectMemberships(): HasMany
+    {
+        return $this->hasMany(ProjectMembership::class);
+    }
+
+    /** @return BelongsToMany<Project, $this> */
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'project_memberships')
+            ->withPivot(['id', 'role', 'added_by_id', 'joined_at'])
+            ->withTimestamps();
+    }
+
     /**
      * Get the attributes that should be cast.
      *

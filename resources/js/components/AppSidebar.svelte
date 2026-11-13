@@ -17,6 +17,9 @@
     import { edit as editProfile } from '@/routes/profile';
     import { edit as editSecurity } from '@/routes/security';
     import WorkspaceSettingsController from '@/actions/App/Http/Controllers/WorkspaceSettingsController';
+    import { index as projectsIndex } from '@/routes/workspaces/projects';
+    import { show as projectShow } from '@/routes/workspaces/projects';
+    import { show as projectSettings } from '@/routes/workspaces/projects/settings';
     import { page } from '@inertiajs/svelte';
     import { toUrl } from '@/lib/utils';
 
@@ -29,6 +32,7 @@
     const url = currentUrlState();
     const { isMobile, setOpenMobile } = useSidebar();
     const workspaceContext = $derived(page.props.workspaceContext);
+    const projectContext = $derived(page.props.projectContext);
     const isWorkspaceSettings = $derived(url.currentUrl.startsWith('/workspaces/') && url.currentUrl.endsWith('/settings'));
     const isSettings = $derived(url.currentUrl.startsWith('/settings') || isWorkspaceSettings);
 
@@ -175,29 +179,71 @@
                         {/if}
                     </nav>
                 {:else}
-                    <p class="px-2 pb-2 text-xs font-medium text-muted-foreground">
-                        Pekerjaan
-                    </p>
+                    {#if projectContext.active}
+                        <div class="mb-4 px-2">
+                            <p class="truncate text-sm font-semibold" title={projectContext.active.name}>
+                                {projectContext.active.name}
+                            </p>
+                            <p class="mt-0.5 text-xs text-muted-foreground">{projectContext.active.identifier}</p>
+                        </div>
+                    {:else}
+                        <p class="px-2 pb-2 text-xs font-medium text-muted-foreground">
+                            Pekerjaan
+                        </p>
+                    {/if}
                     <nav class="grid gap-1" aria-label="Pekerjaan">
-                        <Link
-                            href={toUrl(dashboard())}
-                            class="flex min-h-10 items-center gap-3 rounded-md bg-sidebar-accent px-2.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                            aria-current="page"
-                            onclick={closeMobileNavigation}
-                        >
-                            <LayoutDashboard class="size-4" aria-hidden="true" />
-                            Beranda
-                        </Link>
+                        {#if projectContext.active}
+                            <Link
+                                href={toUrl(projectShow([projectContext.active.workspace_id, projectContext.active.id]))}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current={url.currentUrl.endsWith(`/projects/${projectContext.active.id}`) ? 'page' : undefined}
+                                onclick={closeMobileNavigation}
+                            >
+                                <LayoutDashboard class="size-4" aria-hidden="true" />
+                                Ikhtisar
+                            </Link>
+                            <Link
+                                href={toUrl(projectSettings([projectContext.active.workspace_id, projectContext.active.id]))}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current={url.currentUrl.endsWith('/settings') ? 'page' : undefined}
+                                onclick={closeMobileNavigation}
+                            >
+                                <Settings class="size-4" aria-hidden="true" />
+                                Pengaturan Project
+                            </Link>
+                        {:else}
+                            <Link
+                                href={toUrl(dashboard())}
+                                class="flex min-h-10 items-center gap-3 rounded-md bg-sidebar-accent px-2.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current="page"
+                                onclick={closeMobileNavigation}
+                            >
+                                <LayoutDashboard class="size-4" aria-hidden="true" />
+                                Beranda
+                            </Link>
+                        {/if}
                     </nav>
 
+                    {#if !projectContext.active}
                     <div class="mt-7">
                         <p class="px-2 pb-2 text-xs font-medium text-muted-foreground">
                             Workspace
                         </p>
-                        <div class="flex items-start gap-3 px-2.5 py-2 text-muted-foreground">
-                            <FolderKanban class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <p class="text-xs leading-5">Belum ada project.</p>
-                        </div>
+                        {#if workspaceContext.active}
+                            <Link
+                                href={toUrl(projectsIndex(workspaceContext.active.id))}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                onclick={closeMobileNavigation}
+                            >
+                                <FolderKanban class="size-4 shrink-0" aria-hidden="true" />
+                                Projects
+                            </Link>
+                        {:else}
+                            <div class="flex items-start gap-3 px-2.5 py-2 text-muted-foreground">
+                                <FolderKanban class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                                <p class="text-xs leading-5">Pilih Workspace untuk melihat Project.</p>
+                            </div>
+                        {/if}
                         {#if workspaceContext.active?.can_manage}
                             <Link
                                 href={toUrl(WorkspaceSettingsController.show(workspaceContext.active.id))}
@@ -209,6 +255,7 @@
                             </Link>
                         {/if}
                     </div>
+                    {/if}
                 {/if}
             </div>
 

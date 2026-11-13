@@ -8,4 +8,14 @@ enum ProjectRole: string
     case Contributor = 'contributor';
     case Commenter = 'commenter';
     case Viewer = 'viewer';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::ProjectAdmin => 'Project Admin',
+            self::Contributor => 'Contributor',
+            self::Commenter => 'Commenter',
+            self::Viewer => 'Viewer',
+        };
+    }
 }

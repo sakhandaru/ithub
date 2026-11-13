@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\WorkspaceRole;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -44,6 +45,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'workspaceContext' => fn (): array => $this->workspaceContext($request->user()),
+            'projectContext' => fn (): array => $this->projectContext($request->route('project')),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
@@ -77,6 +79,24 @@ class HandleInertiaRequests extends Middleware
                 'name' => $membership->workspace->name,
                 'role' => WorkspaceRole::from((string) $membership->getRawOriginal('role'))->value,
             ])->all()),
+        ];
+    }
+
+    /** @return array{active: array{id: string, workspace_id: string, name: string, identifier: string, archived: bool}|null} */
+    private function projectContext(mixed $project): array
+    {
+        if (! $project instanceof Project) {
+            return ['active' => null];
+        }
+
+        return [
+            'active' => [
+                'id' => (string) $project->id,
+                'workspace_id' => (string) $project->workspace_id,
+                'name' => $project->name,
+                'identifier' => $project->identifier,
+                'archived' => $project->isArchived(),
+            ],
         ];
     }
 }
