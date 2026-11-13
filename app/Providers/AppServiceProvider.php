@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\Attachment;
 use App\Models\Comment;
+use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskRelation;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -61,6 +63,20 @@ class AppServiceProvider extends ServiceProvider
                 ->whereBelongsTo($project)
                 ->visibleTo($user)
                 ->findOrFail($value);
+        });
+
+        Route::bind('milestone', function (string $value): Milestone {
+            $project = request()->route('project');
+            abort_unless($project instanceof Project, 404);
+
+            return $project->milestones()->findOrFail($value);
+        });
+
+        Route::bind('relation', function (string $value): TaskRelation {
+            $task = request()->route('task');
+            abort_unless($task instanceof Task, 404);
+
+            return $task->relations()->findOrFail($value);
         });
 
         Route::bind('comment', function (string $value): Comment {

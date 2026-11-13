@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'project_id', 'number', 'identifier', 'title', 'description', 'status', 'priority',
     'assignee_id', 'requester_id', 'created_by_id', 'due_date', 'blocked_reason',
     'canceled_reason', 'reopen_reason', 'completion_note', 'evidence_url', 'completed_at',
+    'parent_task_id', 'milestone_id',
 ])]
 class Task extends Model
 {
@@ -57,6 +58,36 @@ class Task extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    /** @return BelongsTo<Task, $this> */
+    public function parentTask(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_task_id');
+    }
+
+    /** @return HasMany<Task, $this> */
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_task_id');
+    }
+
+    /** @return BelongsTo<Milestone, $this> */
+    public function milestone(): BelongsTo
+    {
+        return $this->belongsTo(Milestone::class);
+    }
+
+    /** @return HasMany<TaskRelation, $this> */
+    public function relations(): HasMany
+    {
+        return $this->hasMany(TaskRelation::class);
+    }
+
+    /** @return HasMany<TaskRelation, $this> */
+    public function relatedRelations(): HasMany
+    {
+        return $this->hasMany(TaskRelation::class, 'related_task_id');
     }
 
     /** @return BelongsToMany<Label, $this> */

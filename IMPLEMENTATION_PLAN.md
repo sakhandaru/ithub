@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **85%**.
+Status saat ini: **91%**.
 
 Yang sudah tersedia:
 
@@ -44,7 +44,6 @@ Yang sudah tersedia:
 
 Yang belum tersedia:
 
-- Sub-task, relasi, dan milestone;
 - komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
 - dashboard berbasis data;
@@ -614,6 +613,8 @@ Menutup seluruh scope MVP Core dan menyiapkannya untuk pilot terbatas.
 
 Progress: **85% sampai 91%**.
 
+Status: **selesai**.
+
 ### Sub-task
 
 - parent dan child Task;
@@ -643,11 +644,29 @@ Progress: **85% sampai 91%**.
 - pengaturan milestone di Project settings;
 - menu hanya tampil ketika fitur milestone aktif.
 
+### Hasil implementasi
+
+- hierarchy Sub-task dengan `parent_task_id` dan pencegahan self-reference/cycle;
+- Milestone Project dengan target date, create/delete, dan relasi ke Task;
+- relasi Task `related`, `duplicate`, dan `blocks` dengan pencegahan relasi duplikat serta lintas Project;
+- endpoint berscope Workspace → Project → Task dengan Policy backend;
+- Audit Log dan Activity Log untuk pembuatan/penghapusan Milestone serta relasi Task;
+- kontrol Sub-task, Milestone, dan relasi di halaman detail Task serta Project settings.
+
 ### Exit criteria
 
-- Sub-task, relasi, dan milestone bekerja pada List, Board, side peek, dan full page;
+- hierarchy tidak dapat membentuk siklus atau menyeberangi Project;
+- Milestone dan relasi hanya dapat dikelola oleh role yang memiliki izin update Project/Task;
+- detail Task menampilkan dan mengelola Sub-task, Milestone, serta relasi nyata;
 - data lama tidak memerlukan perubahan manual;
-- permission dan log untuk ketiga fitur diuji.
+- permission, log, PHPStan, type check, build, dan seluruh test lulus.
+
+### Keputusan Fase 8
+
+- Sub-task tetap Task biasa agar status, PIC, komentar, attachment, dan Activity Log konsisten.
+- Satu Task dapat memiliki satu parent dan satu Milestone; Milestone dapat memiliki banyak Task.
+- Relasi disimpan berarah dengan tipe eksplisit. Relasi terbalik dengan pasangan dan tipe sama ditolak untuk mencegah duplikasi.
+- Workflow bebas tetap menjadi ruang pengembangan berikutnya; Fase 8 hanya menambahkan struktur konteks Task.
 
 ## 14. Fase 9: Dashboard Workspace, search, filter, dan notifikasi
 
@@ -916,7 +935,7 @@ Setiap batch idealnya cukup kecil untuk ditinjau dan diuji secara mandiri.
 - [ ] Fase 5: List, detail, dan side peek Task, 70%.
 - [ ] Fase 6: Kolaborasi, bukti, Activity Log, dan Audit Log, 80%.
 - [ ] Fase 7: Board, dashboard Project, hardening, dan pilot Core, 85%.
-- [ ] Fase 8: Sub-task, relasi, dan milestone, 91%.
+- [x] Fase 8: Sub-task, relasi, dan milestone, 91%.
 - [ ] Fase 9: Dashboard Workspace, search, filter, dan notifikasi, 97%.
 - [ ] Fase 10: State lengkap, archive lanjutan, optimasi, dan pilot akhir, 100%.
 

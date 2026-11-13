@@ -8,6 +8,7 @@
     import Trash2 from '@lucide/svelte/icons/trash-2';
     import ProjectMemberController from '@/actions/App/Http/Controllers/ProjectMemberController';
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
+    import MilestoneController from '@/actions/App/Http/Controllers/MilestoneController';
     import AppHead from '@/components/AppHead.svelte';
     import Heading from '@/components/Heading.svelte';
     import InputError from '@/components/InputError.svelte';
@@ -34,6 +35,7 @@
         archived: boolean;
     };
     type AuditLog = { id: string; action: string; created_at: string; actor: { id: number; name: string } | null };
+    type Milestone = { id: string; name: string; target_date: string | null };
 
     let {
         workspace,
@@ -48,6 +50,7 @@
         visibilities,
         canManage,
         canRestore,
+        milestones,
     }: {
         workspace: Workspace;
         project: Project;
@@ -61,6 +64,7 @@
         visibilities: ProjectOption[];
         canManage: boolean;
         canRestore: boolean;
+        milestones: Milestone[];
     } = $props();
 
     function confirmRemoval(event: MouseEvent, name: string): void {
@@ -156,6 +160,23 @@
                         {/snippet}
                     </Form>
                 {/if}
+            </div>
+        </section>
+
+        <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <h2 class="text-base font-semibold">Milestone</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Kelompokkan Task berdasarkan target penting Project.</p>
+            {#if canManage}
+                <Form {...MilestoneController.store.form({ workspace: workspace.id, project: project.id })} class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+                    {#snippet children({ errors, processing })}
+                        <div class="grid flex-1 gap-2"><Label for="milestone-name">Nama milestone</Label><Input id="milestone-name" name="name" maxlength={120} required /><InputError message={errors.name} /></div>
+                        <div class="grid gap-2"><Label for="milestone-date">Target</Label><Input id="milestone-date" name="target_date" type="date" /><InputError message={errors.target_date} /></div>
+                        <Button type="submit" disabled={processing}>{processing ? 'Menambah...' : 'Tambah'}</Button>
+                    {/snippet}
+                </Form>
+            {/if}
+            <div class="mt-5 divide-y rounded-md border">
+                {#if milestones.length === 0}<p class="px-4 py-5 text-sm text-muted-foreground">Belum ada milestone.</p>{:else}{#each milestones as milestone (milestone.id)}<div class="flex items-center justify-between gap-3 px-4 py-3"><div><p class="text-sm font-medium">{milestone.name}</p><p class="text-xs text-muted-foreground">{milestone.target_date ?? 'Tanpa target'}</p></div>{#if canManage}<Form {...MilestoneController.destroy.form({ workspace: workspace.id, project: project.id, milestone: milestone.id })}><Button type="submit" variant="ghost" size="icon" aria-label={`Hapus ${milestone.name}`}><Trash2 class="size-4" aria-hidden="true" /></Button></Form>{/if}</div>{/each}{/if}
             </div>
         </section>
 

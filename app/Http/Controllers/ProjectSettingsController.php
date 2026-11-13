@@ -50,6 +50,7 @@ class ProjectSettingsController extends Controller
             'statuses' => collect(ProjectStatus::cases())->map(fn (ProjectStatus $status): array => ['value' => $status->value, 'label' => $status->label()]),
             'visibilities' => collect(ProjectVisibility::cases())->map(fn (ProjectVisibility $visibility): array => ['value' => $visibility->value, 'label' => $visibility->label()]),
             'canManage' => Gate::allows('update', $project),
+            'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
             'canRestore' => Gate::allows('restore', $project),
             'auditLogs' => $auditLogs->map(fn ($auditLog): array => [
                 'id' => $auditLog->id,

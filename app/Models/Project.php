@@ -117,6 +117,18 @@ class Project extends Model
         return $this->hasMany(Label::class);
     }
 
+    /** @return HasMany<Milestone, $this> */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(Milestone::class);
+    }
+
+    /** @return HasMany<TaskRelation, $this> */
+    public function taskRelations(): HasMany
+    {
+        return $this->hasMany(TaskRelation::class);
+    }
+
     /** @return HasMany<ActivityLog, $this> */
     public function activityLogs(): HasMany
     {

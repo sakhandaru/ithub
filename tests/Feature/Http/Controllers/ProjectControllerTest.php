@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Projects\CreateProject;
+use App\Actions\Tasks\CreateTask;
 use App\Actions\Workspaces\CreateWorkspace;
 use App\Enums\ProjectVisibility;
 use App\Models\Project;
@@ -69,10 +70,10 @@ test('project dashboard calculates task health from project data', function () {
         'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
         'visibility' => 'workspace', 'status' => 'active',
     ]);
-    $first = app(\App\Actions\Tasks\CreateTask::class)->handle($owner, $project, ['title' => 'Selesai']);
+    $first = app(CreateTask::class)->handle($owner, $project, ['title' => 'Selesai']);
     $first->update(['status' => 'done']);
-    app(\App\Actions\Tasks\CreateTask::class)->handle($owner, $project, ['title' => 'Terblokir']);
-    $project->tasks()->latest('created_at')->firstOrFail()->update(['status' => 'blocked']);
+    $blockedTask = app(CreateTask::class)->handle($owner, $project, ['title' => 'Terblokir']);
+    $blockedTask->update(['status' => 'blocked']);
 
     $this->actingAs($owner)
         ->get(route('workspaces.projects.dashboard', [$workspace, $project]))

@@ -30,6 +30,8 @@ class StoreTaskRequest extends FormRequest
             'due_date' => ['nullable', 'date'],
             'label_ids' => ['sometimes', 'array'],
             'label_ids.*' => ['ulid', 'exists:labels,id'],
+            'parent_task_id' => ['nullable', 'ulid', 'exists:tasks,id'],
+            'milestone_id' => ['nullable', 'ulid', 'exists:milestones,id'],
         ];
     }
 
@@ -60,6 +62,16 @@ class StoreTaskRequest extends FormRequest
             $labelIds = $this->input('label_ids', []);
             if ($labelIds !== [] && $project->labels()->whereIn('id', $labelIds)->count() !== count($labelIds)) {
                 $validator->errors()->add('label_ids', 'Label harus berasal dari Project yang sama.');
+            }
+
+            $parentId = $this->input('parent_task_id');
+            if ($parentId !== null && ! $project->tasks()->whereKey($parentId)->exists()) {
+                $validator->errors()->add('parent_task_id', 'Parent Task harus berasal dari Project yang sama.');
+            }
+
+            $milestoneId = $this->input('milestone_id');
+            if ($milestoneId !== null && ! $project->milestones()->whereKey($milestoneId)->exists()) {
+                $validator->errors()->add('milestone_id', 'Milestone harus berasal dari Project yang sama.');
             }
         }];
     }

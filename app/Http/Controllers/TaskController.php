@@ -7,12 +7,14 @@ use App\Actions\Tasks\CreateTask;
 use App\Actions\Tasks\UpdateTask;
 use App\Enums\ProjectRole;
 use App\Enums\TaskPriority;
+use App\Enums\TaskRelationType;
 use App\Enums\TaskStatus;
 use App\Http\Requests\AssignTaskRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskRelation;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
@@ -82,7 +84,7 @@ class TaskController extends Controller
     public function show(Request $request, Workspace $workspace, Project $project, Task $task): Response
     {
         Gate::authorize('view', $task);
-        $task->load(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color', 'comments.user', 'attachments.uploader', 'activityLogs.actor']);
+        $task->load(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color', 'comments.user', 'attachments.uploader', 'activityLogs.actor', 'parentTask', 'milestone', 'subtasks.assignee', 'relations.relatedTask']);
         $members = $project->memberships()
             ->with('user:id,name,email')
             ->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])
@@ -94,6 +96,10 @@ class TaskController extends Controller
             'workspace' => $workspace->only(['id', 'name']),
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'task' => $this->taskSummary($task, true),
+            'subtasks' => $task->subtasks->map(fn (Task $subtask): array => $this->taskSummary($subtask))->values(),
+            'milestone' => $task->milestone?->only(['id', 'name', 'target_date']),
+            'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
+            'relations' => $task->relations->map(fn (TaskRelation $relation): array => ['id' => $relation->id, 'type' => (string) $relation->getRawOriginal('type'), 'type_label' => TaskRelationType::from((string) $relation->getRawOriginal('type'))->label(), 'related_task' => $this->taskSummary($relation->relatedTask)])->values(),
             'comments' => $task->comments()->with('user')->get()->map(fn ($comment): array => [
                 'id' => $comment->id,
                 'body' => $comment->body,
@@ -125,6 +131,7 @@ class TaskController extends Controller
             'canAssign' => $request->user()->can('assign', $task),
             'canComment' => $request->user()->can('comment', $task),
             'canAttach' => $request->user()->can('attach', $task),
+            'canManageStructure' => $request->user()->can('update', $task),
         ]);
     }
 
@@ -184,6 +191,8 @@ class TaskController extends Controller
             'created_at' => $task->created_at->toIso8601String(),
             'updated_at' => $task->updated_at->toIso8601String(),
             'is_completed' => $task->isCompleted(),
+            'parent_task_id' => $task->parent_task_id,
+            'milestone' => $task->milestone?->only(['id', 'name', 'target_date']),
         ];
     }
 }
