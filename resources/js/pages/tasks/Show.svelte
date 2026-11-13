@@ -51,6 +51,8 @@
         comments: CommentItem[]; attachments: AttachmentItem[]; activities: ActivityItem[]; canComment: boolean; canAttach: boolean;
         subtasks: Task[]; milestones: Milestone[]; relations: Relation[]; canManageStructure: boolean;
     } = $props();
+
+    const primaryActionLabel = $derived(task.status === 'done' ? 'Buka kembali Task' : task.status === 'blocked' ? 'Lanjutkan Task' : task.status === 'in_progress' ? 'Kirim untuk Review' : task.status === 'in_review' ? 'Perbarui hasil Review' : 'Mulai atau perbarui Task');
 </script>
 
 <AppHead title={task.identifier + ' · ' + task.title} />
@@ -61,7 +63,7 @@
             <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} class="inline-flex min-h-9 items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft class="size-4" aria-hidden="true" />Kembali ke Task</Link>
             <div class="mt-4 flex items-start gap-3"><div class="mt-1 flex size-10 shrink-0 items-center justify-center rounded-md border bg-muted/40"><ClipboardList class="size-5 text-muted-foreground" aria-hidden="true" /></div><div class="min-w-0"><p class="font-mono text-xs text-muted-foreground">{task.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">{task.title}</h1><p class="mt-1 text-sm text-muted-foreground">{project.name} · {project.identifier}</p></div></div>
         </div>
-        <div class="flex flex-wrap gap-2"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}</div>
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}{#if canTransition}<a href="#status-form" class="inline-flex min-h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{primaryActionLabel}</a>{/if}</div>
     </header>
 
     <ProjectContextNav {workspace} {project} active="tasks" />
@@ -73,7 +75,7 @@
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div class="grid gap-6">
             <section class="rounded-lg border bg-card p-5 sm:p-6">
-                <h2 class="text-sm font-semibold">Detail Task</h2>
+                <div class="flex items-start justify-between gap-4"><div><h2 class="text-sm font-semibold">Deskripsi dan konteks</h2><p class="mt-1 text-xs text-muted-foreground">Informasi yang membantu pekerjaan ini dikerjakan dengan benar.</p></div>{#if task.milestone}<Badge variant="outline">{task.milestone.name}</Badge>{/if}</div>
                 {#if canUpdate}
                     <Form {...TaskController.update.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-5">
                         {#snippet children({ errors, processing })}
@@ -90,20 +92,20 @@
             </section>
 
             <section class="rounded-lg border bg-card p-5 sm:p-6">
-                <h2 class="text-sm font-semibold">Sub-task</h2>
+                <div class="flex items-center justify-between gap-3"><div><h2 class="text-sm font-semibold">Sub-task</h2><p class="mt-1 text-xs text-muted-foreground">{subtasks.length} pekerjaan turunan</p></div></div>
                 {#if subtasks.length === 0}<p class="mt-4 text-sm text-muted-foreground">Belum ada Sub-task.</p>{:else}<div class="mt-4 divide-y rounded-md border">{#each subtasks as subtask (subtask.id)}<Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: subtask.id }))} class="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/40"><span><span class="font-mono text-xs text-muted-foreground">{subtask.identifier}</span> {subtask.title}</span><Badge variant="outline">{subtask.status_label}</Badge></Link>{/each}</div>{/if}
                 {#if canManageStructure}<Form {...TaskController.store.form({ workspace: workspace.id, project: project.id })} class="mt-4 flex gap-2"><Input name="title" placeholder="Judul Sub-task" required maxlength={200} /><input type="hidden" name="parent_task_id" value={task.id} /><Button type="submit">Tambah</Button></Form>{/if}
             </section>
 
             <section class="rounded-lg border bg-card p-5 sm:p-6">
-                <h2 class="text-sm font-semibold">Relasi Task</h2>
+                <div class="flex items-center justify-between gap-3"><div><h2 class="text-sm font-semibold">Relasi Task</h2><p class="mt-1 text-xs text-muted-foreground">{relations.length} relasi ke Task lain dalam Project.</p></div></div>
                 {#if relations.length === 0}<p class="mt-4 text-sm text-muted-foreground">Belum ada relasi.</p>{:else}<div class="mt-4 divide-y rounded-md border">{#each relations as relation (relation.id)}<div class="flex items-center justify-between gap-3 px-4 py-3 text-sm"><Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: relation.related_task.id }))} class="min-w-0 hover:underline"><span class="text-xs text-muted-foreground">{relation.type_label}</span> · {relation.related_task.identifier} {relation.related_task.title}</Link>{#if canManageStructure}<Form {...TaskRelationController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, relation: relation.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</div>{/each}</div>{/if}
                 {#if canManageStructure}<Form {...TaskRelationController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input name="related_task_id" placeholder="ID Task terkait" required /><select name="type" class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="related">Terkait</option><option value="duplicate">Duplikat</option><option value="blocks">Menghalangi</option></select><Button type="submit">Tambah relasi</Button></Form>{/if}
             </section>
 
             {#if canTransition}
-                <section class="rounded-lg border bg-card p-5 sm:p-6">
-                    <div class="flex items-center gap-2"><CheckCircle2 class="size-4 text-muted-foreground" aria-hidden="true" /><h2 class="text-sm font-semibold">Perbarui status</h2></div>
+                <section id="status-form" class="scroll-mt-6 rounded-lg border border-primary/30 bg-primary/[0.03] p-5 sm:p-6">
+                    <div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 size-4 text-primary" aria-hidden="true" /><div><h2 class="text-sm font-semibold">{primaryActionLabel}</h2><p class="mt-1 text-xs text-muted-foreground">Perubahan ini akan tercatat di Activity Log dan Audit Log.</p></div></div>
                     <Form {...TaskTransitionController.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-5">
                         {#snippet children({ errors, processing })}
                             <div class="grid gap-2"><Label for="transition-status">Status berikutnya</Label><select id="transition-status" name="status" value={task.status} class="h-11 rounded-md border border-input bg-background px-3 text-sm">{#each statuses as status (status.value)}<option value={status.value}>{status.label}</option>{/each}</select><InputError message={errors.status} /></div>
@@ -160,8 +162,8 @@
             </section>
         </div>
 
-        <aside class="rounded-lg border bg-card p-5">
-            <h2 class="text-sm font-semibold">Properti</h2>
+        <aside class="rounded-lg border bg-card p-5 lg:sticky lg:top-4 lg:self-start">
+            <div class="flex items-center justify-between gap-3"><h2 class="text-sm font-semibold">Context Task</h2><span class="font-mono text-[11px] text-muted-foreground">{task.identifier}</span></div>
             {#if canAssign}
                 <Form {...TaskController.assign.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-2">
                     {#snippet children({ errors, processing })}
