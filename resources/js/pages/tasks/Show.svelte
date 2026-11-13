@@ -68,6 +68,15 @@
 
     <ProjectContextNav {workspace} {project} active="tasks" />
 
+    <div class="sticky top-12 z-20 -mx-4 flex items-center gap-3 border-y bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:-mx-6 sm:px-6 lg:hidden" aria-label="Ringkasan Task">
+        <div class="min-w-0 flex-1">
+            <p class="font-mono text-[11px] text-muted-foreground">{task.identifier}</p>
+            <p class="truncate text-sm font-semibold">{task.title}</p>
+            <p class="mt-0.5 truncate text-xs text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'} · {task.due_date ?? 'Tanpa deadline'}</p>
+        </div>
+        {#if canTransition && transitionStatuses.length > 0}<a href="#status-form" class="inline-flex min-h-10 shrink-0 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Lanjutkan</a>{/if}
+    </div>
+
     {#if project.archived_at}
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan. Task bersifat read-only sampai Project dipulihkan.</div>
     {/if}

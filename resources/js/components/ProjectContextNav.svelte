@@ -22,7 +22,7 @@
     ]);
 </script>
 
-<nav class="-mx-1 flex gap-1 overflow-x-auto border-b px-1 pb-1" aria-label="Navigasi Project">
+<nav class="-mx-1 flex gap-1 overflow-x-auto border-b px-1 pb-1 lg:hidden" aria-label="Navigasi Project">
     {#each items as item (item.key)}
         <Link href={item.href} aria-current={active === item.key ? 'page' : undefined} class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {active === item.key ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}">
             <item.icon class="size-4" aria-hidden="true" />
