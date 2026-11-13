@@ -28,6 +28,6 @@
     } = $props();
 </script>
 
-<div data-slot="badge" class={cn(base, variantClasses[variant], className)} {...rest}>
+<span data-slot="badge" class={cn(base, variantClasses[variant], className)} {...rest}>
     {@render children?.()}
-</div>
+</span>
