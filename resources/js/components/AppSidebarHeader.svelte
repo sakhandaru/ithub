@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from '@inertiajs/svelte';
     import Breadcrumbs from '@/components/Breadcrumbs.svelte';
     import { SidebarTrigger } from '@/components/ui/sidebar';
     import type { BreadcrumbItem } from '@/types';
@@ -8,15 +9,20 @@
     }: {
         breadcrumbs?: BreadcrumbItem[];
     } = $props();
+
+    const area = $derived(page.url.startsWith('/settings') ? 'Pengaturan' : 'Pekerjaan');
 </script>
 
 <header
-    class="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/70 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
+    class="flex h-12 shrink-0 items-center gap-2 border-b border-sidebar-border px-2 sm:px-3"
 >
-    <div class="flex items-center gap-2">
-        <SidebarTrigger class="-ml-1" />
+    <div class="flex min-w-0 items-center gap-2">
+        <SidebarTrigger class="size-10 sm:size-8" />
+        <span class="text-sm font-medium sm:hidden">{area}</span>
         {#if breadcrumbs && breadcrumbs.length > 0}
-            <Breadcrumbs {breadcrumbs} />
+            <div class="hidden min-w-0 sm:block">
+                <Breadcrumbs {breadcrumbs} />
+            </div>
         {/if}
     </div>
 </header>

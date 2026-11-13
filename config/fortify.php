@@ -134,6 +134,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Email Verification
+    |--------------------------------------------------------------------------
+    |
+    | Email verification is disabled by default while the application is in
+    | development and can be enabled explicitly per environment.
+    |
+    */
+
+    'email_verification' => env('FORTIFY_EMAIL_VERIFICATION', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Passkeys
     |--------------------------------------------------------------------------
     |

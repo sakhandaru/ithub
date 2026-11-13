@@ -1,15 +1,11 @@
 <script lang="ts">
-    import { page } from '@inertiajs/svelte';
-    import AppLogoIcon from '@/components/AppLogoIcon.svelte';
-
-    const name = $derived(page.props.name);
 </script>
 
 <div
-    class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+    class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground"
 >
-    <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
+    ST
 </div>
 <div class="ml-1 grid flex-1 text-left text-sm">
-    <span class="mb-0.5 truncate leading-tight font-semibold">{name}</span>
+    <span class="mb-0.5 truncate leading-tight font-semibold">sitop</span>
 </div>
