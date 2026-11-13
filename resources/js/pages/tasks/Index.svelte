@@ -34,20 +34,38 @@
     type Member = { id: number; name: string }; type Milestone = { id: string; name: string };
     let { workspace, project, tasks, selectedTask, filters, statuses, priorities, filterMembers, filterMilestones, canCreate }: {
         workspace: Workspace; project: Project; tasks: Task[]; selectedTask: Task | null;
-        filters: { status: string; priority: string; assignee: string; requester: string; milestone: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
+        filters: { status: string; priority: string; assignee: string; requester: string; milestone: string; preset: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
         statuses: Option[]; priorities: Option[]; filterMembers: Member[]; filterMilestones: Milestone[]; canCreate: boolean;
     } = $props();
 
     const taskListUrl = (query: Record<string, string | number | undefined> = {}): string =>
         toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query }));
 
+    const preservedQuery = (): Record<string, string | number | undefined> => ({
+        preset: filters.preset || undefined,
+        status: filters.status || undefined,
+        priority: filters.priority || undefined,
+        assignee: filters.assignee || undefined,
+        requester: filters.requester || undefined,
+        milestone: filters.milestone || undefined,
+        no_deadline: filters.no_deadline ? 1 : undefined,
+        no_evidence: filters.no_evidence ? 1 : undefined,
+        search: filters.search || undefined,
+        sort: filters.sort || undefined,
+        direction: filters.direction || undefined,
+    });
+
     function closePeek(): string {
-        return taskListUrl({
-            status: filters.status || undefined, priority: filters.priority || undefined,
-            assignee: filters.assignee || undefined, requester: filters.requester || undefined, milestone: filters.milestone || undefined, no_deadline: filters.no_deadline ? 1 : undefined, no_evidence: filters.no_evidence ? 1 : undefined, search: filters.search || undefined, sort: filters.sort || undefined,
-            direction: filters.direction || undefined,
-        });
+        return taskListUrl(preservedQuery());
     }
+
+    const presets = [
+        { key: '', label: 'Semua Task' },
+        { key: 'mine', label: 'Task saya' },
+        { key: 'overdue', label: 'Terlambat' },
+        { key: 'blocked', label: 'Blocked' },
+        { key: 'unassigned', label: 'Tanpa PIC' },
+    ];
 
     const activeFilterChips = $derived([
         filters.status ? { key: 'status', label: `Status: ${statuses.find((item) => item.value === filters.status)?.label ?? filters.status}` } : null,
@@ -56,11 +74,12 @@
         filters.milestone ? { key: 'milestone', label: filters.milestone === 'none' ? 'Tanpa milestone' : `Milestone: ${filterMilestones.find((item) => item.id === filters.milestone)?.name ?? filters.milestone}` } : null,
         filters.no_deadline ? { key: 'no_deadline', label: 'Tanpa deadline' } : null,
         filters.no_evidence ? { key: 'no_evidence', label: 'Tanpa bukti' } : null,
+        filters.preset ? { key: 'preset', label: presets.find((preset) => preset.key === filters.preset)?.label ?? filters.preset } : null,
         filters.search ? { key: 'search', label: `Cari: ${filters.search}` } : null,
     ].filter((chip): chip is { key: string; label: string } => chip !== null));
 
     function clearFilter(key: string): string {
-        const query: Record<string, string | number | undefined> = { status: filters.status || undefined, priority: filters.priority || undefined, assignee: filters.assignee || undefined, requester: filters.requester || undefined, milestone: filters.milestone || undefined, no_deadline: filters.no_deadline ? 1 : undefined, no_evidence: filters.no_evidence ? 1 : undefined, search: filters.search || undefined };
+        const query = preservedQuery();
         delete query[key];
         return taskListUrl(query);
     }
@@ -76,7 +95,7 @@
                 <span aria-hidden="true">/</span><span>Task</span>
             </div>
             <h1 class="mt-2 text-2xl font-semibold tracking-tight">{project.name}</h1>
-            <p class="mt-1 text-sm text-muted-foreground">Daftar pekerjaan dan triage Task dalam Project.</p>
+            <p class="mt-1 text-sm text-muted-foreground">Pilih prioritas kerja, buka konteks, lalu lanjutkan Task tanpa kehilangan posisi.</p>
         </div>
         {#if selectedTask}
             <Link href={closePeek()} class="inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"><X class="size-4" aria-hidden="true" />Tutup detail</Link>
@@ -105,7 +124,19 @@
     {/if}
 
     <section class="rounded-lg border bg-card p-4">
+        <div class="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-sm font-semibold">Mulai dari fokus kerja</h2>
+                <p class="mt-1 text-xs text-muted-foreground">Preset ini membantu menemukan Task yang perlu ditangani lebih dulu.</p>
+            </div>
+            <div class="flex flex-wrap gap-2" aria-label="Preset Task">
+                {#each presets as preset (preset.key)}
+                    <Link href={taskListUrl({ ...preservedQuery(), preset: preset.key || undefined })} class="inline-flex min-h-9 items-center rounded-md border px-3 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {filters.preset === preset.key ? 'border-foreground bg-foreground text-background hover:bg-foreground' : 'bg-background'}" aria-current={filters.preset === preset.key ? 'page' : undefined}>{preset.label}</Link>
+                {/each}
+            </div>
+        </div>
         <form method="get" action={taskListUrl()} class="grid gap-3 sm:grid-cols-2 lg:flex lg:items-end">
+            <input type="hidden" name="preset" value={filters.preset} />
             <div class="sm:col-span-2 lg:min-w-64 lg:flex-1">
                 <Label for="task-search">Cari Task</Label>
                 <div class="relative mt-2"><Search class="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input id="task-search" name="search" value={filters.search} class="min-h-11 pl-9" placeholder="ID atau judul" /></div>
@@ -126,11 +157,11 @@
     {/if}
 
     {#if tasks.length === 0}
-        <section class="flex min-h-64 items-center justify-center rounded-lg border border-dashed bg-card px-6 py-12 text-center"><div class="max-w-md"><ListTodo class="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><h2 class="mt-4 text-sm font-semibold">Belum ada Task yang cocok</h2><p class="mt-1 text-sm leading-6 text-muted-foreground">{filters.search || filters.status || filters.priority ? 'Coba ubah filter atau buat Task baru.' : 'Buat Task pertama untuk mulai bekerja.'}</p></div></section>
+        <section class="flex min-h-64 items-center justify-center rounded-lg border border-dashed bg-card px-6 py-12 text-center"><div class="max-w-md"><ListTodo class="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><h2 class="mt-4 text-sm font-semibold">Belum ada Task yang cocok</h2><p class="mt-1 text-sm leading-6 text-muted-foreground">{activeFilterChips.length > 0 ? 'Coba ubah preset atau filter untuk melihat Task lain.' : 'Buat Task pertama untuk mulai bekerja.'}</p>{#if activeFilterChips.length > 0}<Link href={taskListUrl()} class="mt-4 inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Reset semua filter</Link>{/if}</div></section>
     {:else}
         <section class="overflow-x-auto rounded-lg border bg-card">
             <table class="w-full min-w-[58rem] text-left text-sm"><caption class="sr-only">Daftar Task dalam {project.name}</caption><thead class="bg-muted/40 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">ID</th><th class="px-4 py-3 font-medium">Task</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium">Priority</th><th class="px-4 py-3 font-medium">PIC</th><th class="px-4 py-3 font-medium">Deadline</th></tr></thead>
-                <tbody class="divide-y">{#each tasks as task (task.id)}<tr class="hover:bg-muted/20 {selectedTask?.id === task.id ? 'bg-muted/40' : ''}"><td class="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{task.identifier}</td><td class="px-4 py-3 align-top"><Link href={taskListUrl({ status: filters.status || undefined, priority: filters.priority || undefined, search: filters.search || undefined, task: task.id })} class="block min-h-10 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span class="font-medium hover:underline">{task.title}</span>{#if task.labels.length}<span class="mt-1 flex flex-wrap gap-1">{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</span>{/if}</Link></td><td class="px-4 py-3 align-top"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge></td><td class="px-4 py-3 align-top text-muted-foreground">{task.priority_label ?? '—'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.due_date ?? '—'}</td></tr>{/each}</tbody>
+                <tbody class="divide-y">{#each tasks as task (task.id)}<tr class="hover:bg-muted/20 {selectedTask?.id === task.id ? 'bg-muted/40' : ''}"><td class="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{task.identifier}</td><td class="px-4 py-3 align-top"><Link href={taskListUrl({ ...preservedQuery(), task: task.id })} class="block min-h-10 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span class="font-medium hover:underline">{task.title}</span>{#if task.labels.length}<span class="mt-1 flex flex-wrap gap-1">{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</span>{/if}</Link></td><td class="px-4 py-3 align-top"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge></td><td class="px-4 py-3 align-top text-muted-foreground">{task.priority_label ?? '—'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.due_date ?? '—'}</td></tr>{/each}</tbody>
             </table>
         </section>
     {/if}
@@ -143,6 +174,9 @@
         <div class="mt-5 flex flex-wrap gap-2"><Badge variant="secondary">{selectedTask.status_label}</Badge>{#if selectedTask.priority_label}<Badge variant="outline">{selectedTask.priority_label}</Badge>{/if}</div>
         <p class="mt-5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{selectedTask.description ?? 'Belum ada deskripsi.'}</p>
         <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">PIC</dt><dd class="mt-1 font-medium">{selectedTask.assignee?.name ?? 'Belum ada PIC'}</dd></div><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{selectedTask.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Deadline</dt><dd class="mt-1 font-medium">{selectedTask.due_date ?? '—'}</dd></div></dl>
-        <Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: selectedTask.id }))} class="mt-6 inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka halaman penuh</Link>
+        <div class="mt-6 grid gap-2">
+            <Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: selectedTask.id }))} class="inline-flex min-h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring">Buka halaman penuh</Link>
+            <Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: selectedTask.id }) + '#status-form')} class="inline-flex min-h-10 items-center justify-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Lanjutkan ke aksi Task</Link>
+        </div>
     </aside>
 {/if}

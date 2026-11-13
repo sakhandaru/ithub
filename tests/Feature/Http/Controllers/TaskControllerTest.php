@@ -84,6 +84,30 @@ test('task list filters by search and exposes a selected side peek task', functi
             ->where('filters.search', 'monitoring'));
 });
 
+test('task list supports triage presets', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal',
+        'identifier' => 'PORTAL',
+        'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace',
+        'status' => 'active',
+    ]);
+    $blockedTask = app(CreateTask::class)->handle($owner, $project, ['title' => 'Task terblokir']);
+    $blockedTask->update(['status' => 'blocked']);
+    app(CreateTask::class)->handle($owner, $project, ['title' => 'Task biasa']);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.index', [$workspace, $project]).'?preset=blocked')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tasks/Index')
+            ->has('tasks', 1)
+            ->where('tasks.0.id', $blockedTask->id)
+            ->where('filters.preset', 'blocked'));
+});
+
 test('task detail page loads the same task context', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');

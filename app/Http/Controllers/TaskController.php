@@ -34,6 +34,7 @@ class TaskController extends Controller
         $assignee = $request->string('assignee')->toString();
         $requester = $request->string('requester')->toString();
         $milestone = $request->string('milestone')->toString();
+        $preset = $request->string('preset')->toString();
         $search = trim($request->string('search')->toString());
         $sort = $request->string('sort', 'created_at')->toString();
         $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
@@ -47,6 +48,10 @@ class TaskController extends Controller
             ->when($milestone !== '', fn ($query) => $query->where('milestone_id', $milestone === 'none' ? null : $milestone))
             ->when($request->boolean('no_deadline'), fn ($query) => $query->whereNull('due_date'))
             ->when($request->boolean('no_evidence'), fn ($query) => $query->whereNull('completion_note')->whereNull('evidence_url'))
+            ->when($preset === 'mine', fn ($query) => $query->where('assignee_id', $request->user()->getKey()))
+            ->when($preset === 'overdue', fn ($query) => $query->whereNotNull('due_date')->whereDate('due_date', '<', now())->whereNotIn('status', [TaskStatus::Done->value, TaskStatus::Canceled->value]))
+            ->when($preset === 'blocked', fn ($query) => $query->where('status', TaskStatus::Blocked->value))
+            ->when($preset === 'unassigned', fn ($query) => $query->whereNull('assignee_id'))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search): void {
                 $searchQuery->where('title', 'like', "%{$search}%")
                     ->orWhere('identifier', 'like', "%{$search}%");
@@ -68,7 +73,7 @@ class TaskController extends Controller
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'selectedTask' => $selectedTask ? $this->taskSummary($selectedTask, true) : null,
-            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
+            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'filterMembers' => $project->memberships()->with('user:id,name')->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name])->values(),
