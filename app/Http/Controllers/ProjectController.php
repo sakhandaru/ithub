@@ -65,6 +65,7 @@ class ProjectController extends Controller
     {
         Gate::authorize('view', $project);
         $project->load(['unit', 'projectLead', 'defaultAssignee', 'creator', 'memberships.user']);
+        $project->loadCount('tasks');
 
         return Inertia::render('projects/Show', [
             'workspace' => $workspace->only(['id', 'name']),
@@ -75,6 +76,7 @@ class ProjectController extends Controller
                 'default_assignee' => $project->defaultAssignee?->only(['id', 'name', 'email']),
                 'created_by' => $project->creator?->only(['id', 'name', 'email']),
                 'members_count' => $project->memberships->count(),
+                'tasks_count' => $project->tasks_count,
                 'is_read_only' => $project->isArchived(),
             ],
             'canManage' => Gate::allows('update', $project),

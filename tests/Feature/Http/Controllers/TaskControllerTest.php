@@ -60,3 +60,47 @@ test('task route does not expose a task from another project', function () {
         ->patch(route('workspaces.projects.tasks.update', [$workspace, $project, $task]), ['title' => 'Tidak boleh'])
         ->assertNotFound();
 });
+
+test('task list filters by search and exposes a selected side peek task', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal',
+        'identifier' => 'PORTAL',
+        'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace',
+        'status' => 'active',
+    ]);
+    $task = app(CreateTask::class)->handle($owner, $project, ['title' => 'Monitoring produksi']);
+    app(CreateTask::class)->handle($owner, $project, ['title' => 'Dokumentasi internal']);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.index', [$workspace, $project]).'?search=monitoring&task='.$task->id)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tasks/Index')
+            ->has('tasks', 1)
+            ->where('selectedTask.id', $task->id)
+            ->where('filters.search', 'monitoring'));
+});
+
+test('task detail page loads the same task context', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal',
+        'identifier' => 'PORTAL',
+        'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace',
+        'status' => 'active',
+    ]);
+    $task = app(CreateTask::class)->handle($owner, $project, ['title' => 'Task detail']);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.show', [$workspace, $project, $task]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tasks/Show')
+            ->where('task.id', $task->id)
+            ->where('task.title', 'Task detail'));
+});

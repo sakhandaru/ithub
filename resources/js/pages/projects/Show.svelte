@@ -3,10 +3,12 @@
     import Archive from '@lucide/svelte/icons/archive';
     import CalendarDays from '@lucide/svelte/icons/calendar-days';
     import FolderKanban from '@lucide/svelte/icons/folder-kanban';
+    import ListTodo from '@lucide/svelte/icons/list-todo';
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
     import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
     import ProjectArchiveController from '@/actions/App/Http/Controllers/ProjectArchiveController';
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
+    import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import AppHead from '@/components/AppHead.svelte';
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
@@ -20,6 +22,7 @@
         default_assignee: ProjectPerson | null;
         created_by: ProjectPerson | null;
         members_count: number;
+        tasks_count: number;
         is_read_only: boolean;
     };
 
@@ -100,9 +103,21 @@
             {:else}
                 <p class="mt-2 text-sm text-muted-foreground">Belum ada deskripsi atau tujuan Project.</p>
             {/if}
-            <div class="mt-8 rounded-md border border-dashed px-4 py-8 text-center">
-                <p class="text-sm font-medium">Task belum tersedia</p>
-                <p class="mt-1 text-sm text-muted-foreground">Task akan dikelola di dalam Project ini pada fase berikutnya.</p>
+            <div class="mt-8 rounded-md border bg-muted/20 px-4 py-5">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-start gap-3">
+                        <ListTodo class="mt-0.5 size-5 text-muted-foreground" aria-hidden="true" />
+                        <div>
+                            <p class="text-sm font-medium">{project.tasks_count} Task</p>
+                            <p class="mt-1 text-sm text-muted-foreground">Buka daftar Task untuk mulai bekerja.</p>
+                        </div>
+                    </div>
+                    <Button variant="outline" class="min-h-10" asChild>
+                        {#snippet children(props)}
+                            <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} {...props}>Buka Task</Link>
+                        {/snippet}
+                    </Button>
+                </div>
             </div>
         </section>
 

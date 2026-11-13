@@ -1,0 +1,120 @@
+<script module lang="ts">
+    import { index } from '@/routes/workspaces/projects/tasks';
+    export const layout = { breadcrumbs: [{ title: 'Task', href: index(['', '']) }] };
+</script>
+
+<script lang="ts">
+    import { Form, Link } from '@inertiajs/svelte';
+    import Filter from '@lucide/svelte/icons/filter';
+    import ListTodo from '@lucide/svelte/icons/list-todo';
+    import Search from '@lucide/svelte/icons/search';
+    import X from '@lucide/svelte/icons/x';
+    import TaskController from '@/actions/App/Http/Controllers/TaskController';
+    import AppHead from '@/components/AppHead.svelte';
+    import InputError from '@/components/InputError.svelte';
+    import { Badge } from '@/components/ui/badge';
+    import { Button } from '@/components/ui/button';
+    import { Input } from '@/components/ui/input';
+    import { Label } from '@/components/ui/label';
+    import { toUrl } from '@/lib/utils';
+
+    type Workspace = { id: string; name: string };
+    type Project = { id: string; name: string; identifier: string; archived_at: string | null };
+    type Option = { value: string; label: string };
+    type Person = { id: number; name: string };
+    type TaskLabel = { id: string; name: string; color: string | null };
+    type Task = {
+        id: string; identifier: string; title: string; description: string | null;
+        status: string; status_label: string; priority: string | null; priority_label: string | null;
+        assignee: Person | null; requester: Person | null; labels: TaskLabel[];
+        due_date: string | null; completed_at: string | null;
+    };
+
+    let { workspace, project, tasks, selectedTask, filters, statuses, priorities, canCreate }: {
+        workspace: Workspace; project: Project; tasks: Task[]; selectedTask: Task | null;
+        filters: { status: string; priority: string; search: string; sort: string; direction: string };
+        statuses: Option[]; priorities: Option[]; canCreate: boolean;
+    } = $props();
+
+    const taskListUrl = (query: Record<string, string | number | undefined> = {}): string =>
+        toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query }));
+
+    function closePeek(): string {
+        return taskListUrl({
+            status: filters.status || undefined, priority: filters.priority || undefined,
+            search: filters.search || undefined, sort: filters.sort || undefined,
+            direction: filters.direction || undefined,
+        });
+    }
+</script>
+
+<AppHead title={project.identifier + ' · Task'} />
+
+<div class="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+    <header class="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} class="hover:text-foreground hover:underline">{project.identifier}</Link>
+                <span aria-hidden="true">/</span><span>Task</span>
+            </div>
+            <h1 class="mt-2 text-2xl font-semibold tracking-tight">{project.name}</h1>
+            <p class="mt-1 text-sm text-muted-foreground">Daftar pekerjaan dan triage Task dalam Project.</p>
+        </div>
+        {#if selectedTask}
+            <Link href={closePeek()} class="inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"><X class="size-4" aria-hidden="true" />Tutup detail</Link>
+        {/if}
+    </header>
+
+    {#if project.archived_at}
+        <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan. Task bersifat read-only sampai Project dipulihkan.</div>
+    {/if}
+
+    {#if canCreate && !project.archived_at}
+        <section class="rounded-lg border bg-card p-4">
+            <Form {...TaskController.store.form({ workspace: workspace.id, project: project.id })} class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                {#snippet children({ errors, processing })}
+                    <div class="min-w-0 flex-1">
+                        <Label for="quick-task-title">Buat Task</Label>
+                        <Input id="quick-task-title" name="title" class="mt-2 min-h-11" placeholder="Apa yang perlu dikerjakan?" required maxlength={200} autocomplete="off" />
+                        <InputError message={errors.title} />
+                    </div>
+                    <Button type="submit" class="min-h-11" disabled={processing}>{processing ? 'Membuat...' : 'Tambah Task'}</Button>
+                {/snippet}
+            </Form>
+        </section>
+    {/if}
+
+    <section class="rounded-lg border bg-card p-4">
+        <form method="get" action={taskListUrl()} class="grid gap-3 sm:grid-cols-2 lg:flex lg:items-end">
+            <div class="sm:col-span-2 lg:min-w-64 lg:flex-1">
+                <Label for="task-search">Cari Task</Label>
+                <div class="relative mt-2"><Search class="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" /><Input id="task-search" name="search" value={filters.search} class="min-h-11 pl-9" placeholder="ID atau judul" /></div>
+            </div>
+            <div><Label for="task-status">Status</Label><select id="task-status" name="status" value={filters.status} class="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Semua status</option>{#each statuses as status (status.value)}<option value={status.value}>{status.label}</option>{/each}</select></div>
+            <div><Label for="task-priority">Priority</Label><select id="task-priority" name="priority" value={filters.priority} class="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Semua priority</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select></div>
+            <Button type="submit" variant="outline" class="min-h-11"><Filter class="size-4" aria-hidden="true" />Filter</Button>
+            <Link href={taskListUrl()} class="min-h-10 text-sm text-muted-foreground hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring">Reset filter</Link>
+        </form>
+    </section>
+
+    {#if tasks.length === 0}
+        <section class="flex min-h-64 items-center justify-center rounded-lg border border-dashed bg-card px-6 py-12 text-center"><div class="max-w-md"><ListTodo class="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><h2 class="mt-4 text-sm font-semibold">Belum ada Task yang cocok</h2><p class="mt-1 text-sm leading-6 text-muted-foreground">{filters.search || filters.status || filters.priority ? 'Coba ubah filter atau buat Task baru.' : 'Buat Task pertama untuk mulai bekerja.'}</p></div></section>
+    {:else}
+        <section class="overflow-x-auto rounded-lg border bg-card">
+            <table class="w-full min-w-[58rem] text-left text-sm"><caption class="sr-only">Daftar Task dalam {project.name}</caption><thead class="bg-muted/40 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">ID</th><th class="px-4 py-3 font-medium">Task</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium">Priority</th><th class="px-4 py-3 font-medium">PIC</th><th class="px-4 py-3 font-medium">Deadline</th></tr></thead>
+                <tbody class="divide-y">{#each tasks as task (task.id)}<tr class="hover:bg-muted/20 {selectedTask?.id === task.id ? 'bg-muted/40' : ''}"><td class="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{task.identifier}</td><td class="px-4 py-3 align-top"><Link href={taskListUrl({ status: filters.status || undefined, priority: filters.priority || undefined, search: filters.search || undefined, task: task.id })} class="block min-h-10 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span class="font-medium hover:underline">{task.title}</span>{#if task.labels.length}<span class="mt-1 flex flex-wrap gap-1">{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</span>{/if}</Link></td><td class="px-4 py-3 align-top"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge></td><td class="px-4 py-3 align-top text-muted-foreground">{task.priority_label ?? '—'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.due_date ?? '—'}</td></tr>{/each}</tbody>
+            </table>
+        </section>
+    {/if}
+</div>
+
+{#if selectedTask}
+    <div class="fixed inset-0 z-40 bg-black/30 lg:hidden" aria-hidden="true"></div>
+    <aside class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto border-l bg-background p-5 shadow-xl sm:max-w-lg lg:sticky lg:top-0 lg:z-auto lg:w-[24rem] lg:self-start lg:rounded-lg lg:border lg:p-5 lg:shadow-none" aria-label="Detail Task">
+        <div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="font-mono text-xs text-muted-foreground">{selectedTask.identifier}</p><h2 class="mt-1 text-lg font-semibold">{selectedTask.title}</h2></div><Link href={closePeek()} aria-label="Tutup detail Task" class="rounded-md p-2 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"><X class="size-4" aria-hidden="true" /></Link></div>
+        <div class="mt-5 flex flex-wrap gap-2"><Badge variant="secondary">{selectedTask.status_label}</Badge>{#if selectedTask.priority_label}<Badge variant="outline">{selectedTask.priority_label}</Badge>{/if}</div>
+        <p class="mt-5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{selectedTask.description ?? 'Belum ada deskripsi.'}</p>
+        <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">PIC</dt><dd class="mt-1 font-medium">{selectedTask.assignee?.name ?? 'Belum ada PIC'}</dd></div><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{selectedTask.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Deadline</dt><dd class="mt-1 font-medium">{selectedTask.due_date ?? '—'}</dd></div></dl>
+        <Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: selectedTask.id }))} class="mt-6 inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka halaman penuh</Link>
+    </aside>
+{/if}

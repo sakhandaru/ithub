@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **58%**.
+Status saat ini: **70%**.
 
 Yang sudah tersedia:
 
@@ -44,7 +44,6 @@ Yang sudah tersedia:
 
 Yang belum tersedia:
 
-- Task List, detail, dan side peek penuh;
 - komentar, attachment, bukti, Activity Log, dan Audit Log lengkap;
 - komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
@@ -405,6 +404,8 @@ Menyelesaikan aturan bisnis inti Task sebelum membangun tampilan List dan Board 
 
 Progress: **58% sampai 70%**.
 
+Status: **selesai**.
+
 ### Tujuan
 
 Menyediakan alur harian create, assign, work, review, dan done melalui UI Plane-like.
@@ -455,6 +456,17 @@ Menyediakan alur harian create, assign, work, review, dan done melalui UI Plane-
 - side peek mempertahankan konteks List;
 - desktop dan mobile dapat menjalankan alur yang sama;
 - tidak ada kontrol yang tampil tanpa backend nyata.
+
+### Implementasi dan keputusan Fase 5
+
+- Task List berada di bawah konteks Project dan hanya memuat Task yang lolos scope Project.
+- Quick add hanya meminta Title; field lain tetap dikelola dari detail Task.
+- Filter awal mencakup pencarian ID/judul, status, dan priority. Query filter dipertahankan saat side peek dibuka.
+- Side peek memakai parameter query `task`, sehingga daftar tetap menjadi konteks utama dan dapat ditutup tanpa kehilangan filter.
+- Pada mobile side peek menjadi panel full-screen; pada desktop tampil sebagai panel konteks di sisi kanan.
+- Halaman detail penuh memakai sumber data dan action yang sama dengan side peek.
+- Task List, detail, create, update, assignment, dan transition memakai Wayfinder untuk seluruh pemanggilan route.
+- Project arsip menampilkan daftar/detail dalam mode read-only dan tidak menampilkan quick add atau aksi perubahan.
 
 ## 11. Fase 6: Kolaborasi, bukti, Activity Log, dan Audit Log
 
