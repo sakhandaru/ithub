@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **97%**.
+Status saat ini: **100%**.
 
 Yang sudah tersedia:
 
@@ -743,6 +743,21 @@ Status: **selesai**.
 
 Progress: **97% sampai 100%**.
 
+Status: **selesai untuk MVP saat ini**.
+
+### Hasil implementasi
+
+- regression test untuk Project archived/read-only dan restore;
+- index query tambahan untuk deadline, requester, milestone, dan status;
+- shortcut Cmd/Ctrl+K menuju Global Search;
+- quality gate penuh: formatter, PHPStan, Svelte type-check, test suite, dan production build;
+- checklist pilot dan batas scope terdokumentasi di rencana implementasi.
+
+### Catatan pasca-MVP
+
+- mention parser, reminder deadline terjadwal, workload chart, dan QA browser interaktif masih menjadi backlog lanjutan;
+- tidak ada fitur tersebut yang ditampilkan sebagai kemampuan aktif palsu pada MVP.
+
 ### Penyelesaian state UI
 
 Audit setiap layar untuk state yang relevan:
@@ -948,7 +963,7 @@ Setiap batch idealnya cukup kecil untuk ditinjau dan diuji secara mandiri.
 - [ ] Fase 7: Board, dashboard Project, hardening, dan pilot Core, 85%.
 - [x] Fase 8: Sub-task, relasi, dan milestone, 91%.
 - [x] Fase 9: Dashboard Workspace, search, filter, dan notifikasi, 97%.
-- [ ] Fase 10: State lengkap, archive lanjutan, optimasi, dan pilot akhir, 100%.
+- [x] Fase 10: State lengkap, archive lanjutan, optimasi, dan pilot akhir, 100%.
 
 ## 20. Aturan perubahan rencana
 

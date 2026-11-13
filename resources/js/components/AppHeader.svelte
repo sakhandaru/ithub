@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Link, page } from '@inertiajs/svelte';
+    import { onMount } from 'svelte';
+    import { Link, page, router } from '@inertiajs/svelte';
     import BookOpen from '@lucide/svelte/icons/book-open';
     import Folder from '@lucide/svelte/icons/folder';
     import LayoutGrid from '@lucide/svelte/icons/layout-grid';
@@ -57,6 +58,17 @@
     const auth = $derived(page.props.auth);
     const url = currentUrlState();
     const unreadCount = $derived(page.props.notifications?.unread_count ?? 0);
+
+    onMount(() => {
+        const handleShortcut = (event: KeyboardEvent): void => {
+            if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                router.visit(toUrl(search()));
+            }
+        };
+        window.addEventListener('keydown', handleShortcut);
+        return () => window.removeEventListener('keydown', handleShortcut);
+    });
 
     const activeItemStyles =
         'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
