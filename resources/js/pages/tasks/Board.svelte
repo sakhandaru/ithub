@@ -10,6 +10,7 @@
     import { Link, router } from '@inertiajs/svelte';
     import GripVertical from '@lucide/svelte/icons/grip-vertical';
     import ListTodo from '@lucide/svelte/icons/list-todo';
+    import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import TaskTransitionController from '@/actions/App/Http/Controllers/TaskTransitionController';
     import AppHead from '@/components/AppHead.svelte';
@@ -33,6 +34,17 @@
 
     function tasksFor(status: string): Task[] {
         return optimisticTasks.filter((task) => task.status === status);
+    }
+
+    function isOverdue(task: Task): boolean {
+        return Boolean(task.due_date && !['done', 'canceled'].includes(task.status) && new Date(`${task.due_date}T23:59:59`) < new Date());
+    }
+
+    function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+        if (status === 'blocked' || status === 'canceled') return 'destructive';
+        if (status === 'done') return 'secondary';
+
+        return 'outline';
     }
 
     function transition(task: Task, target: string): void {
@@ -79,18 +91,21 @@
     <ProjectContextNav {workspace} {project} active="board" />
     {#if project.archived_at}<div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan dan Board bersifat read-only.</div>{/if}
 
-    <div class="flex gap-4 overflow-x-auto pb-3" aria-label="Board Task">
+    <div class="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground sm:hidden"><MoveHorizontal class="size-4 shrink-0" aria-hidden="true" />Geser ke samping untuk melihat semua status. Gunakan menu pada kartu untuk memindahkan Task.</div>
+
+    <div class="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory sm:gap-4 sm:snap-none" role="region" aria-label="Board Task">
         {#each statuses as status (status.value)}
-            <section class="w-[18rem] shrink-0 rounded-lg border bg-muted/20 p-3 sm:w-[20rem]" ondragover={(event) => event.preventDefault()} ondrop={(event) => drop(event, status.value)} aria-label={status.label}>
-                <header class="flex items-center justify-between gap-2 px-1 pb-3"><h2 class="text-sm font-semibold">{status.label}</h2><Badge variant="outline">{tasksFor(status.value).length}</Badge></header>
+            <section class="w-[min(82vw,18rem)] shrink-0 snap-start rounded-lg border bg-muted/20 p-3 sm:w-[20rem] sm:snap-none" ondragover={(event) => event.preventDefault()} ondrop={(event) => drop(event, status.value)} aria-label={status.label}>
+                <header class="sticky top-0 z-10 flex items-center justify-between gap-2 bg-muted/20 px-1 pb-3 pt-1"><div><h2 class="text-sm font-semibold">{status.label}</h2><p class="mt-1 text-[11px] text-muted-foreground">{tasksFor(status.value).length === 1 ? '1 Task' : `${tasksFor(status.value).length} Task`}</p></div><Badge variant={statusVariant(status.value)}>{tasksFor(status.value).length}</Badge></header>
                 <div class="grid min-h-28 gap-3 rounded-md border border-dashed p-2">
                     {#each tasksFor(status.value) as task (task.id)}
-                        <article draggable={!project.archived_at} ondragstart={() => { draggedTask = task; }} class="rounded-md border bg-card p-3 shadow-sm {busyTaskId === task.id ? 'opacity-50' : ''}">
+                        <article draggable={!project.archived_at} ondragstart={() => { draggedTask = task; }} class="rounded-md border bg-card p-3 shadow-sm transition-shadow hover:shadow-md {busyTaskId === task.id ? 'opacity-50' : ''}">
                             <div class="flex items-start gap-2"><GripVertical class="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: task.id }))} class="min-w-0 flex-1 text-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{task.title}</Link></div>
                             <p class="mt-2 font-mono text-[11px] text-muted-foreground">{task.identifier}</p>
                             <div class="mt-3 flex flex-wrap gap-1">{#if task.priority_label}<Badge variant="outline" class="text-[11px]">{task.priority_label}</Badge>{/if}{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</div>
-                            <div class="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground"><span>{task.assignee?.name ?? 'Belum ada PIC'}</span><span>{task.due_date ?? '—'}</span></div>
-                            <select aria-label={'Pindahkan ' + task.identifier} value={task.status} disabled={!!project.archived_at || busyTaskId === task.id} onchange={(event) => transition(task, event.currentTarget.value)} class="mt-3 h-9 w-full rounded-md border border-input bg-background px-2 text-xs"><option value={task.status}>Pindahkan ke...</option>{#each statuses as next (next.value)}{#if next.value !== task.status}<option value={next.value}>{next.label}</option>{/if}{/each}</select>
+                            <div class="mt-3 flex items-center justify-between gap-2 text-xs"><span class="truncate text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</span><span class={isOverdue(task) ? 'font-medium text-destructive' : 'text-muted-foreground'}>{task.due_date ?? 'Tanpa deadline'}</span></div>
+                            {#if isOverdue(task)}<p class="mt-2 text-[11px] font-medium text-destructive">Deadline terlewat</p>{/if}
+                            <label class="sr-only" for={'move-' + task.id}>Pindahkan {task.identifier}</label><select id={'move-' + task.id} aria-label={'Pindahkan ' + task.identifier} value={task.status} disabled={!!project.archived_at || busyTaskId === task.id} onchange={(event) => transition(task, event.currentTarget.value)} class="mt-3 h-10 w-full rounded-md border border-input bg-background px-2 text-xs"><option value={task.status}>Pindahkan ke...</option>{#each statuses as next (next.value)}{#if next.value !== task.status}<option value={next.value}>{next.label}</option>{/if}{/each}</select>
                         </article>
                     {/each}
                     {#if tasksFor(status.value).length === 0}<div class="flex items-center justify-center py-8 text-xs text-muted-foreground"><ListTodo class="mr-2 size-4" aria-hidden="true" />Kosong</div>{/if}
