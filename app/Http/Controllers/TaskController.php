@@ -87,12 +87,42 @@ class TaskController extends Controller
     {
         Gate::authorize('view', $project);
 
+        $status = $request->string('status')->toString();
+        $priority = $request->string('priority')->toString();
+        $assignee = $request->string('assignee')->toString();
+        $requester = $request->string('requester')->toString();
+        $milestone = $request->string('milestone')->toString();
+        $preset = $request->string('preset')->toString();
+        $search = trim($request->string('search')->toString());
+        $sort = $request->string('sort', 'created_at')->toString();
+        $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
+        $tasks = $project->tasks()
+            ->with(['assignee:id,name', 'labels:id,name,color'])
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($priority !== '', fn ($query) => $query->where('priority', $priority))
+            ->when($assignee !== '', fn ($query) => $query->where('assignee_id', $assignee === 'none' ? null : $assignee))
+            ->when($requester !== '', fn ($query) => $query->where('requester_id', $requester))
+            ->when($milestone !== '', fn ($query) => $query->where('milestone_id', $milestone === 'none' ? null : $milestone))
+            ->when($request->boolean('no_deadline'), fn ($query) => $query->whereNull('due_date'))
+            ->when($request->boolean('no_evidence'), fn ($query) => $query->whereNull('completion_note')->whereNull('evidence_url'))
+            ->when($preset === 'mine', fn ($query) => $query->where('assignee_id', $request->user()->getKey()))
+            ->when($preset === 'overdue', fn ($query) => $query->whereNotNull('due_date')->whereDate('due_date', '<', now())->whereNotIn('status', [TaskStatus::Done->value, TaskStatus::Canceled->value]))
+            ->when($preset === 'blocked', fn ($query) => $query->where('status', TaskStatus::Blocked->value))
+            ->when($preset === 'unassigned', fn ($query) => $query->whereNull('assignee_id'))
+            ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search): void {
+                $searchQuery->where('title', 'like', "%{$search}%")
+                    ->orWhere('identifier', 'like', "%{$search}%");
+            }))
+            ->orderBy(in_array($sort, ['created_at', 'due_date', 'identifier', 'title', 'status'], true) ? $sort : 'created_at', $direction)
+            ->get();
+
         return Inertia::render('tasks/Board', [
             'workspace' => $workspace->only(['id', 'name']),
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
-            'tasks' => $project->tasks()->with(['assignee:id,name', 'labels:id,name,color'])->orderBy('created_at')->get()->map(fn (Task $task): array => $this->taskSummary($task))->values(),
+            'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'canTransition' => $request->user()->can('transition', $project->tasks()->first() ?? new Task(['project_id' => $project->id])),
+            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
         ]);
     }
 

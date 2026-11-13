@@ -12,12 +12,12 @@
     type Project = { id: string };
     type NavKey = 'overview' | 'tasks' | 'board' | 'dashboard';
 
-    let { workspace, project, active }: { workspace: Workspace; project: Project; active: NavKey } = $props();
+    let { workspace, project, active, taskQuery = {} }: { workspace: Workspace; project: Project; active: NavKey; taskQuery?: Record<string, string | number | undefined> } = $props();
 
     const items = $derived([
         { key: 'overview' as NavKey, label: 'Ikhtisar', href: toUrl(ProjectController.show({ workspace: workspace.id, project: project.id })), icon: FolderKanban },
-        { key: 'tasks' as NavKey, label: 'Task', href: toUrl(TaskController.index({ workspace: workspace.id, project: project.id })), icon: ListTodo },
-        { key: 'board' as NavKey, label: 'Board', href: toUrl(TaskController.board({ workspace: workspace.id, project: project.id })), icon: BarChart3 },
+        { key: 'tasks' as NavKey, label: 'Task', href: toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery })), icon: ListTodo },
+        { key: 'board' as NavKey, label: 'Board', href: toUrl(TaskController.board({ workspace: workspace.id, project: project.id }, { query: taskQuery })), icon: BarChart3 },
         { key: 'dashboard' as NavKey, label: 'Dashboard', href: toUrl(ProjectController.dashboard({ workspace: workspace.id, project: project.id })), icon: LayoutDashboard },
     ]);
 </script>

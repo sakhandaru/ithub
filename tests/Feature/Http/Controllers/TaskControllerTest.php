@@ -146,3 +146,26 @@ test('board groups tasks by workflow status', function () {
             ->component('tasks/Board')
             ->where('tasks.0.status', 'in_progress'));
 });
+
+test('board preserves and applies task list filters', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $blockedTask = app(CreateTask::class)->handle($owner, $project, ['title' => 'Blocked board task']);
+    $blockedTask->update(['status' => 'blocked']);
+    app(CreateTask::class)->handle($owner, $project, ['title' => 'Other board task']);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.board', [$workspace, $project]).'?preset=blocked&sort=title&direction=asc')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tasks/Board')
+            ->has('tasks', 1)
+            ->where('tasks.0.id', $blockedTask->id)
+            ->where('filters.preset', 'blocked')
+            ->where('filters.sort', 'title')
+            ->where('filters.direction', 'asc'));
+});

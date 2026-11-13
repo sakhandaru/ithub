@@ -102,7 +102,10 @@
         {/if}
     </header>
 
-    <ProjectContextNav {workspace} {project} active="tasks" />
+    <ProjectContextNav {workspace} {project} active="tasks" taskQuery={preservedQuery()} />
+
+    <div class={selectedTask ? 'grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start' : ''}>
+        <div class="min-w-0 grid gap-6">
 
     {#if project.archived_at}
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan. Task bersifat read-only sampai Project dipulihkan.</div>
@@ -165,11 +168,11 @@
             </table>
         </section>
     {/if}
-</div>
+        </div>
 
 {#if selectedTask}
     <div class="fixed inset-0 z-40 bg-black/30 lg:hidden" aria-hidden="true"></div>
-    <aside class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto border-l bg-background p-5 shadow-xl sm:max-w-lg lg:sticky lg:top-0 lg:z-auto lg:w-[24rem] lg:self-start lg:rounded-lg lg:border lg:p-5 lg:shadow-none" aria-label="Detail Task">
+    <aside class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto border-l bg-background p-5 shadow-xl sm:max-w-lg lg:sticky lg:top-4 lg:z-auto lg:max-h-[calc(100vh-2rem)] lg:w-auto lg:self-start lg:rounded-lg lg:border lg:p-5 lg:shadow-none" aria-label="Detail Task">
         <div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="font-mono text-xs text-muted-foreground">{selectedTask.identifier}</p><h2 class="mt-1 text-lg font-semibold">{selectedTask.title}</h2></div><Link href={closePeek()} aria-label="Tutup detail Task" class="rounded-md p-2 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"><X class="size-4" aria-hidden="true" /></Link></div>
         <div class="mt-5 flex flex-wrap gap-2"><Badge variant="secondary">{selectedTask.status_label}</Badge>{#if selectedTask.priority_label}<Badge variant="outline">{selectedTask.priority_label}</Badge>{/if}</div>
         <p class="mt-5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{selectedTask.description ?? 'Belum ada deskripsi.'}</p>
@@ -180,3 +183,5 @@
         </div>
     </aside>
 {/if}
+    </div>
+</div>
