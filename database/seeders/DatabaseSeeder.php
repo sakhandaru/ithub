@@ -64,6 +64,13 @@ class DatabaseSeeder extends Seeder
             'completed' => $this->createProject($owner, $workspace, $units['Development']->id, 'Pilot Knowledge Base', 'KNOW', 'Project contoh yang sudah selesai dan siap diarsipkan.', $developer, 'completed', '2026-09-30'),
         ];
 
+        $demoLeads = [$developer, $infra, $operations];
+        $demoUnits = [$units['Development']->id, $units['Infra']->id, $units['Operasional']->id];
+        for ($index = 1; $index <= 6; $index++) {
+            $lead = $demoLeads[($index - 1) % count($demoLeads)];
+            $projects['demo_'.$index] = $this->createProject($owner, $workspace, $demoUnits[($index - 1) % count($demoUnits)], 'Demo Project '.str_pad((string) $index, 2, '0', STR_PAD_LEFT), 'DEMO'.str_pad((string) $index, 2, '0', STR_PAD_LEFT), 'Project tambahan untuk pengujian tampilan dan volume data.', $lead, 'active', now()->addDays(25 + ($index * 7))->toDateString());
+        }
+
         foreach ($projects as $project) {
             foreach ([[$developer, ProjectRole::Contributor], [$infra, ProjectRole::Contributor], [$operations, ProjectRole::Contributor], [$reviewer, ProjectRole::Commenter]] as [$member, $role]) {
                 if (! $project->memberships()->where('user_id', $member->id)->exists()) {
@@ -79,6 +86,10 @@ class DatabaseSeeder extends Seeder
         $this->seedVolume($owner, $reviewer, $projects['security'], [$infra, $developer], ['Review akses admin', 'Rotasi secret aplikasi', 'Scan dependency vulnerability', 'Simulasi incident response', 'Validasi MFA akun privileged', 'Review log authentication', 'Perbarui security baseline', 'Uji backup credential', 'Audit permission Project', 'Dokumentasi threat model', 'Tindak lanjut finding audit', 'Security review release'], ['Security', 'Audit', 'Risk']);
         $this->seedVolume($owner, $reviewer, $projects['procurement'], [$owner, $operations], ['Kumpulkan kebutuhan laptop', 'Bandingkan penawaran vendor', 'Validasi spesifikasi workstation', 'Susun estimasi anggaran', 'Review kontrak maintenance', 'Buat matriks prioritas', 'Minta persetujuan pengadaan', 'Dokumentasikan keputusan vendor', 'Siapkan berita acara', 'Update daftar kebutuhan unit'], ['Procurement', 'Vendor', 'Budget']);
         $this->seedCompleted($owner, $developer, $projects['completed']);
+        $volumeTitles = array_map(fn (int $index): string => 'Task operasional demo nomor '.str_pad((string) $index, 2, '0', STR_PAD_LEFT), range(1, 20));
+        foreach (range(1, 6) as $index) {
+            $this->seedVolume($owner, $reviewer, $projects['demo_'.$index], $demoLeads, $volumeTitles, ['Planning', 'Execution', 'Review', 'Follow-up', 'Documentation']);
+        }
 
         $owner->forceFill(['active_workspace_id' => $workspace->id])->save();
         $developer->notify(new TaskNotification('welcome', 'Selamat datang di sitop', 'Workspace demo sudah siap untuk dieksplorasi.', route('dashboard')));
