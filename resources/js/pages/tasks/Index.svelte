@@ -29,16 +29,18 @@
         id: string; identifier: string; title: string; description: string | null;
         status: string; status_label: string; priority: string | null; priority_label: string | null;
         assignee: Person | null; requester: Person | null; labels: TaskLabel[];
-        due_date: string | null; completed_at: string | null;
+        due_date: string | null; completed_at: string | null; milestone: { id: string; name: string; target_date: string | null } | null;
     };
 
     type Member = { id: number; name: string }; type Milestone = { id: string; name: string };
+    type TaskGroup = { key: string; label: string; tasks: Task[] };
     let { workspace, project, tasks, selectedTask, filters, statuses, priorities, filterMembers, filterMilestones, canCreate }: {
         workspace: Workspace; project: Project; tasks: Task[]; selectedTask: Task | null;
         filters: { status: string; priority: string; assignee: string; requester: string; milestone: string; preset: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
         statuses: Option[]; priorities: Option[]; filterMembers: Member[]; filterMilestones: Milestone[]; canCreate: boolean;
     } = $props();
     let compact = $state(false);
+    let grouping = $state<'none' | 'status' | 'assignee' | 'milestone'>('none');
 
     const taskListUrl = (query: Record<string, string | number | undefined> = {}): string =>
         toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query }));
@@ -85,6 +87,29 @@
         delete query[key];
         return taskListUrl(query);
     }
+
+    const groupedTasks = $derived.by((): TaskGroup[] => {
+        if (grouping === 'none') return [{ key: 'all', label: 'Semua Task', tasks }];
+
+        const groups = new Map<string, TaskGroup>();
+        for (const task of tasks) {
+            const key = grouping === 'status'
+                ? task.status
+                : grouping === 'assignee'
+                    ? task.assignee?.id?.toString() ?? 'unassigned'
+                    : task.milestone?.id ?? 'no-milestone';
+            const label = grouping === 'status'
+                ? task.status_label
+                : grouping === 'assignee'
+                    ? task.assignee?.name ?? 'Belum ada PIC'
+                    : task.milestone?.name ?? 'Tanpa milestone';
+            const group = groups.get(key) ?? { key, label, tasks: [] };
+            group.tasks.push(task);
+            groups.set(key, group);
+        }
+
+        return [...groups.values()];
+    });
 </script>
 
 <AppHead title={project.identifier + ' · Task'} />
@@ -165,9 +190,9 @@
         <section class="flex min-h-64 items-center justify-center rounded-lg border border-dashed bg-card px-6 py-12 text-center"><div class="max-w-md"><ListTodo class="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><h2 class="mt-4 text-sm font-semibold">Belum ada Task yang cocok</h2><p class="mt-1 text-sm leading-6 text-muted-foreground">{activeFilterChips.length > 0 ? 'Coba ubah preset atau filter untuk melihat Task lain.' : 'Buat Task pertama untuk mulai bekerja.'}</p>{#if activeFilterChips.length > 0}<Link href={taskListUrl()} class="mt-4 inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Reset semua filter</Link>{/if}</div></section>
     {:else}
         <section class="overflow-x-auto rounded-lg border bg-card">
-            <div class="flex items-center justify-between gap-3 border-b px-4 py-3"><div><h2 class="text-sm font-semibold">Daftar Task</h2><p class="mt-1 text-xs text-muted-foreground">{tasks.length} Task tampil</p></div><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={() => { compact = !compact; }}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button></div>
+            <div class="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="text-sm font-semibold">Daftar Task</h2><p class="mt-1 text-xs text-muted-foreground">{tasks.length} Task tampil · {groupedTasks.length} kelompok</p></div><div class="flex flex-wrap items-center gap-2"><label class="text-xs text-muted-foreground" for="task-grouping">Kelompokkan</label><select id="task-grouping" bind:value={grouping} class="h-9 rounded-md border border-input bg-background px-2 text-xs"><option value="none">Tanpa grouping</option><option value="status">Status</option><option value="assignee">PIC</option><option value="milestone">Milestone</option></select><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={() => { compact = !compact; }}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button></div></div>
             <table class="w-full min-w-[58rem] text-left {compact ? 'text-xs [&>tbody>tr>td]:px-3 [&>tbody>tr>td]:py-2' : 'text-sm'}"><caption class="sr-only">Daftar Task dalam {project.name}</caption><thead class="bg-muted/40 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">ID</th><th class="px-4 py-3 font-medium">Task</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium">Priority</th><th class="px-4 py-3 font-medium">PIC</th><th class="px-4 py-3 font-medium">Deadline</th></tr></thead>
-                <tbody class="divide-y">{#each tasks as task (task.id)}<tr class="hover:bg-muted/20 {selectedTask?.id === task.id ? 'bg-muted/40' : ''}"><td class="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{task.identifier}</td><td class="px-4 py-3 align-top"><Link href={taskListUrl({ ...preservedQuery(), task: task.id })} class="block min-h-10 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span class="font-medium hover:underline">{task.title}</span>{#if task.labels.length}<span class="mt-1 flex flex-wrap gap-1">{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</span>{/if}</Link></td><td class="px-4 py-3 align-top"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge></td><td class="px-4 py-3 align-top text-muted-foreground">{task.priority_label ?? '—'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.due_date ?? '—'}</td></tr>{/each}</tbody>
+                {#each groupedTasks as group (group.key)}<tbody class="divide-y">{#if grouping !== 'none'}<tr class="bg-muted/20"><th colspan="6" class="px-4 py-2 text-left text-xs font-semibold text-muted-foreground">{group.label} <span class="font-normal">· {group.tasks.length}</span></th></tr>{/if}{#each group.tasks as task (task.id)}<tr class="hover:bg-muted/20 {selectedTask?.id === task.id ? 'bg-muted/40' : ''}"><td class="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{task.identifier}</td><td class="px-4 py-3 align-top"><Link href={taskListUrl({ ...preservedQuery(), task: task.id })} class="block min-h-10 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span class="font-medium hover:underline">{task.title}</span>{#if task.labels.length}<span class="mt-1 flex flex-wrap gap-1">{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</span>{/if}</Link></td><td class="px-4 py-3 align-top"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge></td><td class="px-4 py-3 align-top text-muted-foreground">{task.priority_label ?? '—'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.due_date ?? '—'}</td></tr>{/each}</tbody>{/each}
             </table>
         </section>
     {/if}
