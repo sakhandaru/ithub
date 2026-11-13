@@ -104,3 +104,21 @@ test('task detail page loads the same task context', function () {
             ->where('task.id', $task->id)
             ->where('task.title', 'Task detail'));
 });
+
+test('board groups tasks by workflow status', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $task = app(CreateTask::class)->handle($owner, $project, ['title' => 'Board task']);
+    $task->update(['status' => 'in_progress']);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.board', [$workspace, $project]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tasks/Board')
+            ->where('tasks.0.status', 'in_progress'));
+});

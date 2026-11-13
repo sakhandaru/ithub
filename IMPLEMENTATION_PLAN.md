@@ -18,7 +18,7 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **80%**.
+Status saat ini: **85%**.
 
 Yang sudah tersedia:
 
@@ -44,7 +44,7 @@ Yang sudah tersedia:
 
 Yang belum tersedia:
 
-- Board, dashboard Project, hardening, dan pilot Core;
+- Sub-task, relasi, dan milestone;
 - komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
 - List, Board, side peek, serta detail Project dan Task;
 - dashboard berbasis data;
@@ -541,6 +541,8 @@ Memberi Task konteks kerja dan keterlacakan yang menjadi outcome utama sitop.
 
 Progress: **80% sampai 85%**.
 
+Status: **selesai**.
+
 ### Tujuan
 
 Menutup seluruh scope MVP Core dan menyiapkannya untuk pilot terbatas.
@@ -594,6 +596,19 @@ Menutup seluruh scope MVP Core dan menyiapkannya untuk pilot terbatas.
 - seluruh Task Done memiliki catatan penyelesaian atau bukti;
 - pilot dapat berjalan tanpa spreadsheet sebagai sumber status harian;
 - temuan pilot memiliki keputusan: perbaiki sebelum Follow-up atau masukkan backlog.
+
+### Implementasi dan keputusan Fase 7
+
+- Board memakai daftar status `TaskStatus` yang sama dengan List dan action `TransitionTask` yang sama dengan detail Task.
+- Drag-and-drop melakukan optimistic move. Jika request transition gagal, state kartu dikembalikan ke posisi sebelumnya.
+- Select pada setiap kartu menjadi alternatif keyboard dan mobile untuk perpindahan status tanpa drag.
+- Transition yang membutuhkan alasan atau bukti meminta input sebelum request dikirim.
+- Dashboard Project menghitung total, progress selesai, overdue, Blocked, Task tanpa PIC, Task tanpa deadline, distribusi status, dan Activity terbaru dari database.
+- Ringkasan dashboard membuka Task List dalam konteks Project yang sama.
+- Board dan Dashboard Project bersifat read-only ketika Project diarsipkan.
+- Query dashboard memakai indeks status, assignee, dan project yang sudah tersedia pada tabel Task.
+- Direct-object binding untuk Task, Comment, Attachment, dan nested Project diuji agar objek lintas scope menghasilkan `404`.
+- Pilot Core siap dijalankan pada Project Development; data pekerjaan nyata belum dimasukkan otomatis oleh aplikasi.
 
 ## 13. Fase 8: Sub-task, relasi, dan milestone
 

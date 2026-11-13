@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Projects\CreateProject;
 use App\Actions\Workspaces\CreateWorkspace;
 use App\Enums\ProjectVisibility;
 use App\Models\Project;
@@ -59,4 +60,27 @@ test('unit visibility is limited to members of the project unit', function () {
 
     $this->actingAs($unitMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertOk();
     $this->actingAs($otherMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertNotFound();
+});
+
+test('project dashboard calculates task health from project data', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $first = app(\App\Actions\Tasks\CreateTask::class)->handle($owner, $project, ['title' => 'Selesai']);
+    $first->update(['status' => 'done']);
+    app(\App\Actions\Tasks\CreateTask::class)->handle($owner, $project, ['title' => 'Terblokir']);
+    $project->tasks()->latest('created_at')->firstOrFail()->update(['status' => 'blocked']);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.dashboard', [$workspace, $project]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('projects/Dashboard')
+            ->where('stats.total', 2)
+            ->where('stats.done', 1)
+            ->where('stats.blocked', 1)
+            ->where('stats.progress', 50));
 });

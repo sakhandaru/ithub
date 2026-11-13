@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Projects\CreateProject;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectVisibility;
+use App\Enums\TaskStatus;
 use App\Http\Requests\StoreProjectRequest;
 use App\Models\Project;
 use App\Models\Workspace;
@@ -88,6 +89,43 @@ class ProjectController extends Controller
             ]),
             'canManage' => Gate::allows('update', $project),
             'canRestore' => Gate::allows('restore', $project),
+        ]);
+    }
+
+    public function dashboard(Request $request, Workspace $workspace, Project $project): Response
+    {
+        Gate::authorize('view', $project);
+        $tasks = $project->tasks();
+        $activeStatuses = [TaskStatus::Request->value, TaskStatus::Backlog->value, TaskStatus::Todo->value, TaskStatus::InProgress->value, TaskStatus::InReview->value, TaskStatus::Blocked->value];
+        $total = (clone $tasks)->count();
+        $done = (clone $tasks)->where('status', TaskStatus::Done->value)->count();
+        $statusCounts = (clone $tasks)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $overdue = (clone $tasks)->whereIn('status', $activeStatuses)->whereNotNull('due_date')->whereDate('due_date', '<', now())->count();
+        $blocked = (clone $tasks)->where('status', TaskStatus::Blocked->value)->count();
+        $withoutAssignee = (clone $tasks)->whereNull('assignee_id')->whereIn('status', $activeStatuses)->count();
+        $withoutDeadline = (clone $tasks)->whereNull('due_date')->whereIn('status', $activeStatuses)->count();
+        $project->load(['activityLogs.actor']);
+
+        return Inertia::render('projects/Dashboard', [
+            'workspace' => $workspace->only(['id', 'name']),
+            'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
+            'stats' => [
+                'total' => $total,
+                'done' => $done,
+                'progress' => $total > 0 ? (int) round(($done / $total) * 100) : 0,
+                'overdue' => $overdue,
+                'blocked' => $blocked,
+                'without_assignee' => $withoutAssignee,
+                'without_deadline' => $withoutDeadline,
+                'status_counts' => collect(TaskStatus::cases())->mapWithKeys(fn (TaskStatus $status): array => [$status->value => (int) ($statusCounts[$status->value] ?? 0)]),
+            ],
+            'activities' => $project->activityLogs->sortByDesc('created_at')->take(8)->values()->map(fn ($activity): array => [
+                'id' => $activity->id,
+                'description' => $activity->description,
+                'action' => $activity->action,
+                'created_at' => $activity->created_at->toIso8601String(),
+                'actor' => $activity->actor?->only(['id', 'name']),
+            ]),
         ]);
     }
 

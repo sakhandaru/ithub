@@ -46,6 +46,8 @@ Route::middleware(array_merge(['auth'], config('fortify.email_verification') ? [
             Route::get('/', [ProjectController::class, 'show'])->name('show');
             Route::get('settings', [ProjectSettingsController::class, 'show'])->name('settings.show');
             Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+            Route::get('board', [TaskController::class, 'board'])->name('board');
+            Route::get('dashboard', [ProjectController::class, 'dashboard'])->name('dashboard');
             Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
             Route::patch('/', [ProjectSettingsController::class, 'update'])->name('update');
             Route::post('members', [ProjectMemberController::class, 'store'])->name('members.store');

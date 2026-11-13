@@ -66,6 +66,19 @@ class TaskController extends Controller
         ]);
     }
 
+    public function board(Request $request, Workspace $workspace, Project $project): Response
+    {
+        Gate::authorize('view', $project);
+
+        return Inertia::render('tasks/Board', [
+            'workspace' => $workspace->only(['id', 'name']),
+            'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
+            'tasks' => $project->tasks()->with(['assignee:id,name', 'labels:id,name,color'])->orderBy('created_at')->get()->map(fn (Task $task): array => $this->taskSummary($task))->values(),
+            'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
+            'canTransition' => $request->user()->can('transition', $project->tasks()->first() ?? new Task(['project_id' => $project->id])),
+        ]);
+    }
+
     public function show(Request $request, Workspace $workspace, Project $project, Task $task): Response
     {
         Gate::authorize('view', $task);

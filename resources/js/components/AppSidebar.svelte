@@ -18,6 +18,7 @@
     import { edit as editSecurity } from '@/routes/security';
     import WorkspaceSettingsController from '@/actions/App/Http/Controllers/WorkspaceSettingsController';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
+    import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
     import { index as projectsIndex } from '@/routes/workspaces/projects';
     import { show as projectShow } from '@/routes/workspaces/projects';
     import { show as projectSettings } from '@/routes/workspaces/projects/settings';
@@ -220,6 +221,24 @@
                             >
                                 <FolderKanban class="size-4" aria-hidden="true" />
                                 Task
+                            </Link>
+                            <Link
+                                href={toUrl(TaskController.board({ workspace: projectContext.active.workspace_id, project: projectContext.active.id }))}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current={url.currentUrl.endsWith('/board') ? 'page' : undefined}
+                                onclick={closeMobileNavigation}
+                            >
+                                <FolderKanban class="size-4" aria-hidden="true" />
+                                Board
+                            </Link>
+                            <Link
+                                href={toUrl(ProjectController.dashboard({ workspace: projectContext.active.workspace_id, project: projectContext.active.id }))}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current={url.currentUrl.endsWith('/dashboard') ? 'page' : undefined}
+                                onclick={closeMobileNavigation}
+                            >
+                                <LayoutDashboard class="size-4" aria-hidden="true" />
+                                Dashboard
                             </Link>
                         {:else}
                             <Link
