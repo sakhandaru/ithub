@@ -48,6 +48,22 @@
             direction: filters.direction || undefined,
         });
     }
+
+    const activeFilterChips = $derived([
+        filters.status ? { key: 'status', label: `Status: ${statuses.find((item) => item.value === filters.status)?.label ?? filters.status}` } : null,
+        filters.priority ? { key: 'priority', label: `Priority: ${priorities.find((item) => item.value === filters.priority)?.label ?? filters.priority}` } : null,
+        filters.assignee ? { key: 'assignee', label: filters.assignee === 'none' ? 'Tanpa PIC' : `PIC: ${filterMembers.find((item) => String(item.id) === filters.assignee)?.name ?? filters.assignee}` } : null,
+        filters.milestone ? { key: 'milestone', label: filters.milestone === 'none' ? 'Tanpa milestone' : `Milestone: ${filterMilestones.find((item) => item.id === filters.milestone)?.name ?? filters.milestone}` } : null,
+        filters.no_deadline ? { key: 'no_deadline', label: 'Tanpa deadline' } : null,
+        filters.no_evidence ? { key: 'no_evidence', label: 'Tanpa bukti' } : null,
+        filters.search ? { key: 'search', label: `Cari: ${filters.search}` } : null,
+    ].filter((chip): chip is { key: string; label: string } => chip !== null));
+
+    function clearFilter(key: string): string {
+        const query: Record<string, string | number | undefined> = { status: filters.status || undefined, priority: filters.priority || undefined, assignee: filters.assignee || undefined, requester: filters.requester || undefined, milestone: filters.milestone || undefined, no_deadline: filters.no_deadline ? 1 : undefined, no_evidence: filters.no_evidence ? 1 : undefined, search: filters.search || undefined };
+        delete query[key];
+        return taskListUrl(query);
+    }
 </script>
 
 <AppHead title={project.identifier + ' · Task'} />
@@ -104,6 +120,10 @@
             <Link href={taskListUrl()} class="min-h-10 text-sm text-muted-foreground hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring">Reset filter</Link>
         </form>
     </section>
+
+    {#if activeFilterChips.length > 0}
+        <div class="flex flex-wrap items-center gap-2" aria-label="Filter aktif"><span class="text-xs font-medium text-muted-foreground">Filter aktif:</span>{#each activeFilterChips as chip (chip.key)}<Link href={clearFilter(chip.key)} class="inline-flex min-h-8 items-center rounded-full border bg-muted/40 px-3 text-xs hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{chip.label}<span class="ml-2 text-muted-foreground" aria-hidden="true">×</span><span class="sr-only">Hapus filter {chip.label}</span></Link>{/each}</div>
+    {/if}
 
     {#if tasks.length === 0}
         <section class="flex min-h-64 items-center justify-center rounded-lg border border-dashed bg-card px-6 py-12 text-center"><div class="max-w-md"><ListTodo class="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><h2 class="mt-4 text-sm font-semibold">Belum ada Task yang cocok</h2><p class="mt-1 text-sm leading-6 text-muted-foreground">{filters.search || filters.status || filters.priority ? 'Coba ubah filter atau buat Task baru.' : 'Buat Task pertama untuk mulai bekerja.'}</p></div></section>

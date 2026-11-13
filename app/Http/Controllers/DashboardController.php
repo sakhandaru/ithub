@@ -37,6 +37,14 @@ class DashboardController extends Controller
         $myTasks = $active->where('assignee_id', $user->getKey());
         $overdue = $active->filter(fn ($task) => $task->due_date && $task->due_date->lt($now->toDateString()));
         $blocked = $active->filter(fn ($task) => $task->getRawOriginal('status') === TaskStatus::Blocked->value);
+        $focus = $request->string('focus')->toString();
+        $focus = in_array($focus, ['my_tasks', 'overdue', 'blocked'], true) ? $focus : null;
+        $focusTasks = match ($focus) {
+            'my_tasks' => $myTasks,
+            'overdue' => $overdue,
+            'blocked' => $blocked,
+            default => collect(),
+        };
 
         return Inertia::render('Dashboard', [
             'workspace' => $workspace->only(['id', 'name', 'timezone']),
@@ -45,6 +53,8 @@ class DashboardController extends Controller
             'myTasks' => $myTasks->sortBy('due_date')->take(8)->map(fn ($task): array => ['id' => $task->id, 'identifier' => $task->identifier, 'title' => $task->title, 'project_id' => $task->project_id, 'status' => $task->status->value, 'due_date' => $task->due_date?->toDateString()])->values(),
             'overdueTasks' => $overdue->take(8)->map(fn ($task): array => ['id' => $task->id, 'identifier' => $task->identifier, 'title' => $task->title, 'project_id' => $task->project_id, 'due_date' => $task->due_date?->toDateString()])->values(),
             'blockedTasks' => $blocked->take(8)->map(fn ($task): array => ['id' => $task->id, 'identifier' => $task->identifier, 'title' => $task->title, 'project_id' => $task->project_id])->values(),
+            'focus' => $focus,
+            'focusTasks' => $focusTasks->take(30)->map(fn ($task): array => ['id' => $task->id, 'identifier' => $task->identifier, 'title' => $task->title, 'project_id' => $task->project_id, 'status' => $task->status->value, 'due_date' => $task->due_date?->toDateString()])->values(),
         ]);
     }
 }
