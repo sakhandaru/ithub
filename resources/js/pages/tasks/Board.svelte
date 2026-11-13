@@ -11,6 +11,7 @@
     import GripVertical from '@lucide/svelte/icons/grip-vertical';
     import ListTodo from '@lucide/svelte/icons/list-todo';
     import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
+    import Rows3 from '@lucide/svelte/icons/rows-3';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import TaskTransitionController from '@/actions/App/Http/Controllers/TaskTransitionController';
     import AppHead from '@/components/AppHead.svelte';
@@ -36,6 +37,7 @@
     let transitionCompletionNote = $state('');
     let transitionError = $state('');
     let transitionOpen = $state(false);
+    let compact = $state(false);
 
     $effect(() => {
         optimisticTasks = tasks;
@@ -147,7 +149,7 @@
 <div class="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
     <header class="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div><p class="text-sm text-muted-foreground">{project.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Board</h1><p class="mt-1 text-sm text-muted-foreground">Pindahkan Task berdasarkan workflow Project.</p></div>
-        <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link>
+        <div class="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={() => { compact = !compact; }}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button><Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link></div>
     </header>
     <ProjectContextNav {workspace} {project} active="board" taskQuery={taskQuery()} />
     {#if project.archived_at}<div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan dan Board bersifat read-only.</div>{/if}
@@ -162,7 +164,7 @@
                 <header class="sticky top-0 z-10 flex items-center justify-between gap-2 bg-muted/20 px-1 pb-3 pt-1"><div><h2 class="text-sm font-semibold">{status.label}</h2><p class="mt-1 text-[11px] text-muted-foreground">{tasksFor(status.value).length === 1 ? '1 Task' : `${tasksFor(status.value).length} Task`}</p></div><Badge variant={statusVariant(status.value)}>{tasksFor(status.value).length}</Badge></header>
                 <div class="grid min-h-28 gap-3 rounded-md border border-dashed p-2">
                     {#each tasksFor(status.value) as task (task.id)}
-                        <article draggable={!project.archived_at} ondragstart={() => { draggedTask = task; }} class="rounded-md border bg-card p-3 shadow-sm transition-shadow hover:shadow-md {busyTaskId === task.id ? 'opacity-50' : ''}">
+                        <article draggable={!project.archived_at} ondragstart={() => { draggedTask = task; }} class="rounded-md border bg-card {compact ? 'p-2' : 'p-3'} shadow-sm transition-shadow hover:shadow-md {busyTaskId === task.id ? 'opacity-50' : ''}">
                             <div class="flex items-start gap-2"><GripVertical class="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: task.id }))} class="min-w-0 flex-1 text-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{task.title}</Link></div>
                             <p class="mt-2 font-mono text-[11px] text-muted-foreground">{task.identifier}</p>
                             <div class="mt-3 flex flex-wrap gap-1">{#if task.priority_label}<Badge variant="outline" class="text-[11px]">{task.priority_label}</Badge>{/if}{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</div>

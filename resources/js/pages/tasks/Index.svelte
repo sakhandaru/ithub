@@ -8,6 +8,7 @@
     import Filter from '@lucide/svelte/icons/filter';
     import ListTodo from '@lucide/svelte/icons/list-todo';
     import Search from '@lucide/svelte/icons/search';
+    import Rows3 from '@lucide/svelte/icons/rows-3';
     import X from '@lucide/svelte/icons/x';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import AppHead from '@/components/AppHead.svelte';
@@ -37,6 +38,7 @@
         filters: { status: string; priority: string; assignee: string; requester: string; milestone: string; preset: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
         statuses: Option[]; priorities: Option[]; filterMembers: Member[]; filterMilestones: Milestone[]; canCreate: boolean;
     } = $props();
+    let compact = $state(false);
 
     const taskListUrl = (query: Record<string, string | number | undefined> = {}): string =>
         toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query }));
@@ -163,7 +165,8 @@
         <section class="flex min-h-64 items-center justify-center rounded-lg border border-dashed bg-card px-6 py-12 text-center"><div class="max-w-md"><ListTodo class="mx-auto size-8 text-muted-foreground" aria-hidden="true" /><h2 class="mt-4 text-sm font-semibold">Belum ada Task yang cocok</h2><p class="mt-1 text-sm leading-6 text-muted-foreground">{activeFilterChips.length > 0 ? 'Coba ubah preset atau filter untuk melihat Task lain.' : 'Buat Task pertama untuk mulai bekerja.'}</p>{#if activeFilterChips.length > 0}<Link href={taskListUrl()} class="mt-4 inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Reset semua filter</Link>{/if}</div></section>
     {:else}
         <section class="overflow-x-auto rounded-lg border bg-card">
-            <table class="w-full min-w-[58rem] text-left text-sm"><caption class="sr-only">Daftar Task dalam {project.name}</caption><thead class="bg-muted/40 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">ID</th><th class="px-4 py-3 font-medium">Task</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium">Priority</th><th class="px-4 py-3 font-medium">PIC</th><th class="px-4 py-3 font-medium">Deadline</th></tr></thead>
+            <div class="flex items-center justify-between gap-3 border-b px-4 py-3"><div><h2 class="text-sm font-semibold">Daftar Task</h2><p class="mt-1 text-xs text-muted-foreground">{tasks.length} Task tampil</p></div><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={() => { compact = !compact; }}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button></div>
+            <table class="w-full min-w-[58rem] text-left {compact ? 'text-xs [&>tbody>tr>td]:px-3 [&>tbody>tr>td]:py-2' : 'text-sm'}"><caption class="sr-only">Daftar Task dalam {project.name}</caption><thead class="bg-muted/40 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">ID</th><th class="px-4 py-3 font-medium">Task</th><th class="px-4 py-3 font-medium">Status</th><th class="px-4 py-3 font-medium">Priority</th><th class="px-4 py-3 font-medium">PIC</th><th class="px-4 py-3 font-medium">Deadline</th></tr></thead>
                 <tbody class="divide-y">{#each tasks as task (task.id)}<tr class="hover:bg-muted/20 {selectedTask?.id === task.id ? 'bg-muted/40' : ''}"><td class="px-4 py-3 align-top font-mono text-xs text-muted-foreground">{task.identifier}</td><td class="px-4 py-3 align-top"><Link href={taskListUrl({ ...preservedQuery(), task: task.id })} class="block min-h-10 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span class="font-medium hover:underline">{task.title}</span>{#if task.labels.length}<span class="mt-1 flex flex-wrap gap-1">{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</span>{/if}</Link></td><td class="px-4 py-3 align-top"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge></td><td class="px-4 py-3 align-top text-muted-foreground">{task.priority_label ?? '—'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</td><td class="px-4 py-3 align-top text-muted-foreground">{task.due_date ?? '—'}</td></tr>{/each}</tbody>
             </table>
         </section>
