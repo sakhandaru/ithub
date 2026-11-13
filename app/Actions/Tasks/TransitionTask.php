@@ -27,6 +27,15 @@ final class TransitionTask
 
     public function __construct(private RecordAuditLog $recordAuditLog, private RecordActivity $recordActivity) {}
 
+    /** @return list<TaskStatus> */
+    public function allowedStatuses(TaskStatus $current): array
+    {
+        return array_map(
+            static fn (string $status): TaskStatus => TaskStatus::from($status),
+            self::AllowedTransitions[$current->value],
+        );
+    }
+
     public function handle(User $actor, Task $task, TaskStatus $target, ?string $reason = null, ?string $completionNote = null, ?string $evidenceUrl = null): Task
     {
         return DB::transaction(function () use ($actor, $task, $target, $reason, $completionNote, $evidenceUrl): Task {

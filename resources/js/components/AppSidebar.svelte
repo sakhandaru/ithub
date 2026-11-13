@@ -4,6 +4,8 @@
     import FolderKanban from '@lucide/svelte/icons/folder-kanban';
     import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
     import Palette from '@lucide/svelte/icons/palette';
+    import Search from '@lucide/svelte/icons/search';
+    import Bell from '@lucide/svelte/icons/bell';
     import Settings from '@lucide/svelte/icons/settings';
     import ShieldCheck from '@lucide/svelte/icons/shield-check';
     import UserRound from '@lucide/svelte/icons/user-round';
@@ -13,6 +15,8 @@
     import { Sidebar, useSidebar } from '@/components/ui/sidebar';
     import { currentUrlState } from '@/lib/currentUrl.svelte';
     import { dashboard } from '@/routes';
+    import { search } from '@/routes';
+    import { index as notificationsIndex } from '@/routes/notifications';
     import { edit as editAppearance } from '@/routes/appearance';
     import { edit as editProfile } from '@/routes/profile';
     import { edit as editSecurity } from '@/routes/security';
@@ -35,6 +39,7 @@
     const { isMobile, setOpenMobile } = useSidebar();
     const workspaceContext = $derived(page.props.workspaceContext);
     const projectContext = $derived(page.props.projectContext);
+    const unreadCount = $derived(page.props.notifications?.unread_count ?? 0);
     const isWorkspaceSettings = $derived(url.currentUrl.startsWith('/workspaces/') && url.currentUrl.endsWith('/settings'));
     const isSettings = $derived(url.currentUrl.startsWith('/settings') || isWorkspaceSettings);
 
@@ -112,6 +117,28 @@
                     <span class="text-sm font-semibold tracking-tight">sitop</span>
                 </div>
                 <WorkspaceSwitcher />
+                <nav class="mt-2 grid gap-1 border-t border-sidebar-border pt-2" aria-label="Akses cepat">
+                    <Link
+                        href={toUrl(search())}
+                        class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.currentUrl.startsWith('/search') ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : ''}"
+                        aria-current={url.currentUrl.startsWith('/search') ? 'page' : undefined}
+                        onclick={closeMobileNavigation}
+                    >
+                        <Search class="size-4 shrink-0" aria-hidden="true" />
+                        <span class="min-w-0 flex-1">Cari</span>
+                        <kbd class="hidden rounded border border-sidebar-border px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground sm:inline">⌘K</kbd>
+                    </Link>
+                    <Link
+                        href={toUrl(notificationsIndex())}
+                        class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.currentUrl.startsWith('/notifications') ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : ''}"
+                        aria-current={url.currentUrl.startsWith('/notifications') ? 'page' : undefined}
+                        onclick={closeMobileNavigation}
+                    >
+                        <Bell class="size-4 shrink-0" aria-hidden="true" />
+                        <span class="min-w-0 flex-1">Notifikasi</span>
+                        {#if unreadCount > 0}<span class="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">{unreadCount > 99 ? '99+' : unreadCount}</span>{/if}
+                    </Link>
+                </nav>
             </div>
 
             <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4">

@@ -126,7 +126,8 @@ test('task detail page loads the same task context', function () {
         ->assertInertia(fn ($page) => $page
             ->component('tasks/Show')
             ->where('task.id', $task->id)
-            ->where('task.title', 'Task detail'));
+            ->where('task.title', 'Task detail')
+            ->where('transitionStatuses.0.value', 'todo'));
 });
 
 test('board groups tasks by workflow status', function () {

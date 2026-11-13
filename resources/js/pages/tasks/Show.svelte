@@ -45,9 +45,9 @@
     type Milestone = { id: string; name: string; target_date: string | null };
     type Relation = { id: string; type: string; type_label: string; related_task: Task };
 
-    let { workspace, project, task, members, statuses, priorities, comments, attachments, activities, subtasks, milestones, relations, canUpdate, canTransition, canAssign, canComment, canAttach, canManageStructure }: {
+    let { workspace, project, task, members, statuses, transitionStatuses, priorities, comments, attachments, activities, subtasks, milestones, relations, canUpdate, canTransition, canAssign, canComment, canAttach, canManageStructure }: {
         workspace: Workspace; project: Project; task: Task; members: Person[];
-        statuses: Option[]; priorities: Option[]; canUpdate: boolean; canTransition: boolean; canAssign: boolean;
+        statuses: Option[]; transitionStatuses: Option[]; priorities: Option[]; canUpdate: boolean; canTransition: boolean; canAssign: boolean;
         comments: CommentItem[]; attachments: AttachmentItem[]; activities: ActivityItem[]; canComment: boolean; canAttach: boolean;
         subtasks: Task[]; milestones: Milestone[]; relations: Relation[]; canManageStructure: boolean;
     } = $props();
@@ -63,7 +63,7 @@
             <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} class="inline-flex min-h-9 items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft class="size-4" aria-hidden="true" />Kembali ke Task</Link>
             <div class="mt-4 flex items-start gap-3"><div class="mt-1 flex size-10 shrink-0 items-center justify-center rounded-md border bg-muted/40"><ClipboardList class="size-5 text-muted-foreground" aria-hidden="true" /></div><div class="min-w-0"><p class="font-mono text-xs text-muted-foreground">{task.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">{task.title}</h1><p class="mt-1 text-sm text-muted-foreground">{project.name} · {project.identifier}</p></div></div>
         </div>
-        <div class="flex flex-wrap items-center gap-2 sm:justify-end"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}{#if canTransition}<a href="#status-form" class="inline-flex min-h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{primaryActionLabel}</a>{/if}</div>
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}{#if canTransition && transitionStatuses.length > 0}<a href="#status-form" class="inline-flex min-h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{primaryActionLabel}</a>{/if}</div>
     </header>
 
     <ProjectContextNav {workspace} {project} active="tasks" />
@@ -103,12 +103,12 @@
                 {#if canManageStructure}<Form {...TaskRelationController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input name="related_task_id" placeholder="ID Task terkait" required /><select name="type" class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="related">Terkait</option><option value="duplicate">Duplikat</option><option value="blocks">Menghalangi</option></select><Button type="submit">Tambah relasi</Button></Form>{/if}
             </section>
 
-            {#if canTransition}
+            {#if canTransition && transitionStatuses.length > 0}
                 <section id="status-form" class="scroll-mt-6 rounded-lg border border-primary/30 bg-primary/[0.03] p-5 sm:p-6">
                     <div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 size-4 text-primary" aria-hidden="true" /><div><h2 class="text-sm font-semibold">{primaryActionLabel}</h2><p class="mt-1 text-xs text-muted-foreground">Perubahan ini akan tercatat di Activity Log dan Audit Log.</p></div></div>
                     <Form {...TaskTransitionController.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-5">
                         {#snippet children({ errors, processing })}
-                            <div class="grid gap-2"><Label for="transition-status">Status berikutnya</Label><select id="transition-status" name="status" value={task.status} class="h-11 rounded-md border border-input bg-background px-3 text-sm">{#each statuses as status (status.value)}<option value={status.value}>{status.label}</option>{/each}</select><InputError message={errors.status} /></div>
+                            <div class="grid gap-2"><Label for="transition-status">Status berikutnya</Label><select id="transition-status" name="status" value={transitionStatuses[0]?.value ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm">{#each transitionStatuses as status (status.value)}<option value={status.value}>{status.label}</option>{/each}</select><InputError message={errors.status} /></div>
                             <div class="grid gap-2"><Label for="transition-reason">Alasan <span class="font-normal text-muted-foreground">(wajib untuk Blocked, Canceled, dan Reopen)</span></Label><textarea id="transition-reason" name="reason" rows={3} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea><InputError message={errors.reason} /></div>
                             <div class="grid gap-2"><Label for="completion-note">Catatan penyelesaian atau URL bukti</Label><textarea id="completion-note" name="completion_note" rows={3} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{task.completion_note ?? ''}</textarea><InputError message={errors.completion_note} /></div>
                             <div class="flex justify-end"><Button type="submit" disabled={processing}>{processing ? 'Memperbarui...' : 'Perbarui status'}</Button></div>

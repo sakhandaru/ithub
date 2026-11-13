@@ -26,7 +26,7 @@
     type Task = { id: string; identifier: string; title: string; status: string; status_label: string; priority_label: string | null; assignee: { id: number; name: string } | null; due_date: string | null; labels: Array<{ id: string; name: string }> };
 
     type Filters = { status: string; priority: string; assignee: string; requester: string; milestone: string; preset: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
-    let { workspace, project, tasks, statuses, filters }: { workspace: Workspace; project: Project; tasks: Task[]; statuses: Status[]; filters: Filters } = $props();
+    let { workspace, project, tasks, statuses, filters, allowedTransitions }: { workspace: Workspace; project: Project; tasks: Task[]; statuses: Status[]; filters: Filters; allowedTransitions: Record<string, string[]> } = $props();
     let optimisticTasks = $state<Task[]>([]);
     let draggedTask = $state<Task | null>(null);
     let busyTaskId = $state<string | null>(null);
@@ -89,6 +89,10 @@
 
     function requestTransition(task: Task, target: string): void {
         if (task.status === target || project.archived_at) return;
+        if (!allowedTransitions[task.id]?.includes(target)) {
+            transitionError = `Perpindahan ${task.identifier} ke status tersebut tidak diizinkan.`;
+            return;
+        }
         const needsReason = target === 'blocked' || target === 'canceled' || (task.status === 'done' && target === 'in_progress');
         const needsCompletionNote = target === 'done';
         if (!needsReason && !needsCompletionNote) {
@@ -164,7 +168,7 @@
                             <div class="mt-3 flex flex-wrap gap-1">{#if task.priority_label}<Badge variant="outline" class="text-[11px]">{task.priority_label}</Badge>{/if}{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</div>
                             <div class="mt-3 flex items-center justify-between gap-2 text-xs"><span class="truncate text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</span><span class={isOverdue(task) ? 'font-medium text-destructive' : 'text-muted-foreground'}>{task.due_date ?? 'Tanpa deadline'}</span></div>
                             {#if isOverdue(task)}<p class="mt-2 text-[11px] font-medium text-destructive">Deadline terlewat</p>{/if}
-                            <label class="sr-only" for={'move-' + task.id}>Pindahkan {task.identifier}</label><select id={'move-' + task.id} aria-label={'Pindahkan ' + task.identifier} value={task.status} disabled={!!project.archived_at || busyTaskId === task.id} onchange={(event) => requestTransition(task, event.currentTarget.value)} class="mt-3 h-10 w-full rounded-md border border-input bg-background px-2 text-xs"><option value={task.status}>Pindahkan ke...</option>{#each statuses as next (next.value)}{#if next.value !== task.status}<option value={next.value}>{next.label}</option>{/if}{/each}</select>
+                            <label class="sr-only" for={'move-' + task.id}>Pindahkan {task.identifier}</label><select id={'move-' + task.id} aria-label={'Pindahkan ' + task.identifier} value={task.status} disabled={!!project.archived_at || busyTaskId === task.id || allowedTransitions[task.id]?.length === 0} onchange={(event) => requestTransition(task, event.currentTarget.value)} class="mt-3 h-10 w-full rounded-md border border-input bg-background px-2 text-xs"><option value={task.status}>{allowedTransitions[task.id]?.length ? 'Pindahkan ke...' : 'Tidak ada transisi'}</option>{#each statuses as next (next.value)}{#if allowedTransitions[task.id]?.includes(next.value)}<option value={next.value}>{next.label}</option>{/if}{/each}</select>
                         </article>
                     {/each}
                     {#if tasksFor(status.value).length === 0}<div class="flex items-center justify-center py-8 text-xs text-muted-foreground"><ListTodo class="mr-2 size-4" aria-hidden="true" />Kosong</div>{/if}

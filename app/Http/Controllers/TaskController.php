@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Tasks\AssignTask;
 use App\Actions\Tasks\CreateTask;
+use App\Actions\Tasks\TransitionTask;
 use App\Actions\Tasks\UpdateTask;
 use App\Enums\ProjectRole;
 use App\Enums\TaskPriority;
@@ -83,7 +84,7 @@ class TaskController extends Controller
         ]);
     }
 
-    public function board(Request $request, Workspace $workspace, Project $project): Response
+    public function board(Request $request, Workspace $workspace, Project $project, TransitionTask $transitionTask): Response
     {
         Gate::authorize('view', $project);
 
@@ -123,10 +124,15 @@ class TaskController extends Controller
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'canTransition' => $request->user()->can('transition', $project->tasks()->first() ?? new Task(['project_id' => $project->id])),
             'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
+            'allowedTransitions' => $tasks->mapWithKeys(function (Task $task) use ($transitionTask): array {
+                $current = TaskStatus::from((string) $task->getRawOriginal('status'));
+
+                return [$task->id => array_map(static fn (TaskStatus $status): string => $status->value, $transitionTask->allowedStatuses($current))];
+            })->all(),
         ]);
     }
 
-    public function show(Request $request, Workspace $workspace, Project $project, Task $task): Response
+    public function show(Request $request, Workspace $workspace, Project $project, Task $task, TransitionTask $transitionTask): Response
     {
         Gate::authorize('view', $task);
         $task->load(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color', 'comments.user', 'attachments.uploader', 'activityLogs.actor', 'parentTask', 'milestone', 'subtasks.assignee', 'relations.relatedTask']);
@@ -170,6 +176,7 @@ class TaskController extends Controller
             ])->values(),
             'members' => $members,
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
+            'transitionStatuses' => collect($transitionTask->allowedStatuses(TaskStatus::from((string) $task->getRawOriginal('status'))))->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()])->values(),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'canUpdate' => $request->user()->can('update', $task),
             'canTransition' => $request->user()->can('transition', $task),
