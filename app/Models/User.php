@@ -85,6 +85,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             ->withTimestamps();
     }
 
+    /** @return HasMany<SavedView, $this> */
+    public function savedViews(): HasMany
+    {
+        return $this->hasMany(SavedView::class);
+    }
+
     /** @return HasMany<Task, $this> */
     public function assignedTasks(): HasMany
     {

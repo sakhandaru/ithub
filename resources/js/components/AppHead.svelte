@@ -9,7 +9,7 @@
         children?: Snippet;
     } = $props();
 
-    const appName = import.meta.env.VITE_APP_NAME || 'sitop';
+    const appName = import.meta.env.VITE_APP_NAME || 'ithub';
     const fullTitle = $derived(title ? `${title} - ${appName}` : appName);
 </script>
 

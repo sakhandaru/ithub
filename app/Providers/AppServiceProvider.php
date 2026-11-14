@@ -6,6 +6,7 @@ use App\Models\Attachment;
 use App\Models\Comment;
 use App\Models\Milestone;
 use App\Models\Project;
+use App\Models\SavedView;
 use App\Models\Task;
 use App\Models\TaskRelation;
 use App\Models\Workspace;
@@ -91,6 +92,13 @@ class AppServiceProvider extends ServiceProvider
             abort_unless($task instanceof Task, 404);
 
             return $task->attachments()->findOrFail($value);
+        });
+
+        Route::bind('savedView', function (string $value): SavedView {
+            $project = request()->route('project');
+            abort_unless($project instanceof Project, 404);
+
+            return $project->savedViews()->whereKey($value)->findOrFail($value);
         });
     }
 

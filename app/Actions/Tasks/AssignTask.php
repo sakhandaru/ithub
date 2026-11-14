@@ -19,11 +19,12 @@ final class AssignTask
     {
         return DB::transaction(function () use ($actor, $task, $assignee): Task {
             if ($assignee !== null) {
-                $role = $task->project->memberships()
+                $isEligible = $task->project->memberships()
                     ->where('user_id', $assignee->getKey())
-                    ->value('role');
+                    ->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])
+                    ->exists();
 
-                if (! in_array($role, [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value], true)) {
+                if (! $isEligible) {
                     throw ValidationException::withMessages(['assignee_id' => 'PIC Task harus Project Admin atau Contributor.']);
                 }
             }

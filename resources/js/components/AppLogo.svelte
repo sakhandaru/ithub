@@ -1,11 +1,5 @@
 <script lang="ts">
 </script>
 
-<div
-    class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground"
->
-    ST
-</div>
-<div class="ml-1 grid flex-1 text-left text-sm">
-    <span class="mb-0.5 truncate leading-tight font-semibold">sitop</span>
-</div>
+<img src="/logo-light.svg" alt="ithub" class="h-auto w-32 max-w-full object-contain dark:hidden" />
+<img src="/logo-dark.svg" alt="" aria-hidden="true" class="hidden h-auto w-32 max-w-full object-contain dark:block" />

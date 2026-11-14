@@ -327,6 +327,19 @@ MVP Core menyediakan Global Search untuk Project dan Task. Search lanjutan untuk
 
 Filter Task mencakup Project, Unit, status, PIC, Pemohon, priority, label, deadline, milestone, kelengkapan bukti, PIC, dan deadline.
 
+### 12.4 Saved View
+
+Saved View menjadi fitur MVP Follow-up. User dapat menyimpan kombinasi filter, sorting, grouping, dan density pada halaman Task sebagai view yang dapat digunakan kembali.
+
+Ketentuan awal:
+
+- Saved View tersimpan di backend dan terhubung ke user serta Project;
+- Saved View pribadi hanya dapat dilihat dan diubah oleh pembuatnya;
+- nama Saved View wajib diisi dan unik untuk user dalam Project yang sama;
+- menghapus Saved View memerlukan konfirmasi;
+- Saved View yang merujuk pada status, PIC, label, atau milestone yang sudah tidak tersedia tetap dapat dibuka dengan filter yang diabaikan dan feedback yang jelas;
+- kemampuan membagikan Saved View ke anggota Project menjadi keputusan lanjutan.
+
 ## 14. Notifikasi
 
 MVP menggunakan notifikasi in-app untuk:
@@ -416,6 +429,7 @@ Sebuah fitur MVP dianggap selesai jika:
 - Dashboard Workspace lintas Project;
 - workload per PIC;
 - Global Search dan filter lanjutan;
+- Saved View backend per user dan Project;
 - notifikasi in-app;
 - archive/restore yang lebih lengkap;
 - seluruh keadaan UI yang relevan pada setiap layar.
@@ -455,6 +469,7 @@ Pembagian ini adalah urutan delivery. Model data dan permission harus tetap disi
 - beban kerja PIC dapat dilihat;
 - notifikasi in-app yang relevan berjalan;
 - Search Project dan Task menghasilkan data sesuai permission.
+- Saved View dapat dibuat, dibuka kembali, diubah, dan dihapus lintas sesi pada Project yang sama.
 
 ## 20. Keputusan lanjutan
 

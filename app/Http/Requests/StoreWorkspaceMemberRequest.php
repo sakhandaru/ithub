@@ -57,7 +57,7 @@ class StoreWorkspaceMemberRequest extends FormRequest
         return [
             'email.required' => 'Email anggota wajib diisi.',
             'email.email' => 'Format email tidak valid.',
-            'email.exists' => 'User dengan email tersebut belum terdaftar di sitop.',
+            'email.exists' => 'User dengan email tersebut belum terdaftar di ithub.',
             'role.required' => 'Role Workspace wajib dipilih.',
             'role.enum' => 'Role Workspace tidak valid.',
         ];

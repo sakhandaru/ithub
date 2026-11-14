@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-    import { Link } from '@inertiajs/svelte';
+    import { Link, page } from '@inertiajs/svelte';
     import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
     import Ban from '@lucide/svelte/icons/ban';
     import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -20,6 +20,7 @@
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
     import { toUrl } from '@/lib/utils';
+    import { formatDateTime } from '@/lib/format-date';
 
     type Workspace = { id: string; name: string };
     type Project = { id: string; name: string; identifier: string; archived_at: string | null };
@@ -27,6 +28,7 @@
     type Activity = { id: string; description: string | null; action: string; created_at: string; actor: { id: number; name: string } | null };
 
     let { workspace, project, stats, activities }: { workspace: Workspace; project: Project; stats: Stats; activities: Activity[] } = $props();
+    const workspaceTimezone = $derived(page.props.workspaceContext?.active?.timezone);
 
     const taskUrl = (query: Record<string, string | number>): string => toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query }));
 </script>
@@ -47,6 +49,6 @@
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section class="rounded-lg border bg-card p-5 sm:p-6"><h2 class="text-sm font-semibold">Distribusi status</h2><div class="mt-5 grid gap-3">{#each Object.entries(stats.status_counts) as [status, count]}<div class="flex items-center justify-between gap-3 text-sm"><span class="capitalize text-muted-foreground">{status.replace('_', ' ')}</span><span class="font-medium">{count}</span></div>{/each}</div><div class="mt-6 grid gap-3 border-t pt-5 text-sm"><div class="flex items-center gap-2"><CalendarClock class="size-4 text-muted-foreground" aria-hidden="true" />{stats.without_deadline} Task aktif tanpa deadline</div><div class="flex items-center gap-2"><CircleDashed class="size-4 text-muted-foreground" aria-hidden="true" />{stats.without_assignee} Task aktif tanpa PIC</div></div></section>
-        <section class="rounded-lg border bg-card p-5 sm:p-6"><h2 class="text-sm font-semibold">Activity terbaru</h2>{#if activities.length === 0}<p class="mt-4 text-sm text-muted-foreground">Belum ada aktivitas.</p>{:else}<ol class="mt-5 grid gap-4 border-l pl-4">{#each activities as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {activity.created_at}</p></li>{/each}</ol>{/if}</section>
+        <section class="rounded-lg border bg-card p-5 sm:p-6"><h2 class="text-sm font-semibold">Activity terbaru</h2>{#if activities.length === 0}<p class="mt-4 text-sm text-muted-foreground">Belum ada aktivitas.</p>{:else}<ol class="mt-5 grid gap-4 border-l pl-4">{#each activities as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {formatDateTime(activity.created_at, workspaceTimezone)}</p></li>{/each}</ol>{/if}</section>
     </div>
 </div>

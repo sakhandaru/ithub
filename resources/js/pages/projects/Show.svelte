@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Form, Link } from '@inertiajs/svelte';
+    import { Form, Link, page } from '@inertiajs/svelte';
     import Archive from '@lucide/svelte/icons/archive';
     import CalendarDays from '@lucide/svelte/icons/calendar-days';
     import FolderKanban from '@lucide/svelte/icons/folder-kanban';
@@ -14,6 +14,7 @@
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
     import { toUrl } from '@/lib/utils';
+    import { formatDateTime } from '@/lib/format-date';
     import type { ProjectSummary, ProjectPerson } from '@/types';
 
     type Workspace = { id: string; name: string };
@@ -29,6 +30,7 @@
     type Activity = { id: string; description: string | null; action: string; created_at: string; actor: { id: number; name: string } | null };
 
     let { workspace, project, activities, canManage, canRestore }: { workspace: Workspace; project: Project; activities: Activity[]; canManage: boolean; canRestore: boolean } = $props();
+    const workspaceTimezone = $derived(page.props.workspaceContext?.active?.timezone);
 
     function confirmArchive(event: SubmitEvent): void {
         if (!window.confirm('Arsipkan Project ini? Data dan histori tetap dipertahankan.')) {
@@ -43,7 +45,7 @@
     <header class="flex flex-col gap-5 border-b pb-6 lg:flex-row lg:items-start lg:justify-between">
         <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <Link href={toUrl(ProjectController.index(workspace.id))} class="hover:text-foreground hover:underline">Projects</Link>
+                <Link href={toUrl(ProjectController.index(workspace.id))} class="hover:text-foreground hover:underline">Project</Link>
                 <span aria-hidden="true">/</span>
                 <span class="font-mono">{project.identifier}</span>
             </div>
@@ -124,11 +126,11 @@
                 </div>
             </div>
             <div class="mt-8 border-t pt-6">
-                <h2 class="text-sm font-semibold">Activity Log Project</h2>
+                <h2 id="activity-log" class="text-sm font-semibold scroll-mt-6">Activity Log Project</h2>
                 {#if activities.length === 0}
                     <p class="mt-3 text-sm text-muted-foreground">Belum ada aktivitas Project.</p>
                 {:else}
-                    <ol class="mt-4 grid gap-3 border-l pl-4">{#each activities.slice(0, 8) as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {activity.created_at}</p></li>{/each}</ol>
+                    <ol class="mt-4 grid gap-3 border-l pl-4">{#each activities.slice(0, 8) as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {formatDateTime(activity.created_at, workspaceTimezone)}</p></li>{/each}</ol>
                 {/if}
             </div>
         </section>
@@ -141,7 +143,7 @@
                     <dd class="mt-1 font-medium">{project.project_lead?.name ?? 'Belum ditentukan'}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs text-muted-foreground">Default Assignee</dt>
+                    <dt class="text-xs text-muted-foreground">PIC default</dt>
                     <dd class="mt-1 font-medium">{project.default_assignee?.name ?? 'Tidak ada'}</dd>
                 </div>
                 <div>

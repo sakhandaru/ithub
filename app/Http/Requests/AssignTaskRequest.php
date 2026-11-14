@@ -32,8 +32,11 @@ class AssignTaskRequest extends FormRequest
                 return;
             }
 
-            $role = $task->project->memberships()->where('user_id', $assigneeId)->value('role');
-            if (! in_array($role, [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value], true)) {
+            $isEligible = $task->project->memberships()
+                ->where('user_id', $assigneeId)
+                ->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])
+                ->exists();
+            if (! $isEligible) {
                 $validator->errors()->add('assignee_id', 'PIC Task harus Project Admin atau Contributor di Project ini.');
             }
         }];

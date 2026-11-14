@@ -7,7 +7,8 @@
 </script>
 
 <script lang="ts">
-    import { Link, router } from '@inertiajs/svelte';
+    import { Link, page, router } from '@inertiajs/svelte';
+    import { onMount } from 'svelte';
     import GripVertical from '@lucide/svelte/icons/grip-vertical';
     import ListTodo from '@lucide/svelte/icons/list-todo';
     import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
@@ -38,6 +39,21 @@
     let transitionError = $state('');
     let transitionOpen = $state(false);
     let compact = $state(false);
+    const preferencesKey = $derived(`sitop:task-preferences:${page.props.auth?.user?.id ?? 'guest'}:${project.id}`);
+
+    onMount(() => {
+        try {
+            const stored = localStorage.getItem(preferencesKey);
+            if (stored) compact = (JSON.parse(stored) as { compact?: boolean }).compact ?? false;
+        } catch {
+            compact = false;
+        }
+    });
+
+    function toggleCompact(): void {
+        compact = !compact;
+        localStorage.setItem(preferencesKey, JSON.stringify({ compact }));
+    }
 
     $effect(() => {
         optimisticTasks = tasks;
@@ -149,7 +165,7 @@
 <div class="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
     <header class="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div><p class="text-sm text-muted-foreground">{project.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Board</h1><p class="mt-1 text-sm text-muted-foreground">Pindahkan Task berdasarkan workflow Project.</p></div>
-        <div class="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={() => { compact = !compact; }}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button><Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link></div>
+        <div class="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={toggleCompact}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button><Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link></div>
     </header>
     <ProjectContextNav {workspace} {project} active="board" taskQuery={taskQuery()} />
     {#if project.archived_at}<div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan dan Board bersifat read-only.</div>{/if}

@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-    import { Form, Link } from '@inertiajs/svelte';
+    import { Form, Link, page } from '@inertiajs/svelte';
     import ArrowLeft from '@lucide/svelte/icons/arrow-left';
     import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
     import ClipboardList from '@lucide/svelte/icons/clipboard-list';
@@ -23,6 +23,7 @@
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
+    import { formatDate, formatDateTime } from '@/lib/format-date';
     import { toUrl } from '@/lib/utils';
 
     type Workspace = { id: string; name: string };
@@ -53,6 +54,7 @@
     } = $props();
 
     const primaryActionLabel = $derived(task.status === 'done' ? 'Buka kembali Task' : task.status === 'blocked' ? 'Lanjutkan Task' : task.status === 'in_progress' ? 'Kirim untuk Review' : task.status === 'in_review' ? 'Perbarui hasil Review' : 'Mulai atau perbarui Task');
+    const workspaceTimezone = $derived(page.props.workspaceContext?.active?.timezone);
 </script>
 
 <AppHead title={task.identifier + ' · ' + task.title} />
@@ -88,8 +90,8 @@
                 {#if canUpdate}
                     <Form {...TaskController.update.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-5">
                         {#snippet children({ errors, processing })}
-                            <div class="grid gap-2"><Label for="task-title">Title</Label><Input id="task-title" name="title" value={task.title} required maxlength={200} /><InputError message={errors.title} /></div>
-                            <div class="grid gap-2"><Label for="task-description">Description</Label><textarea id="task-description" name="description" rows={7} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{task.description ?? ''}</textarea><InputError message={errors.description} /></div>
+                            <div class="grid gap-2"><Label for="task-title">Judul</Label><Input id="task-title" name="title" value={task.title} required maxlength={200} /><InputError message={errors.title} /></div>
+                            <div class="grid gap-2"><Label for="task-description">Deskripsi</Label><textarea id="task-description" name="description" rows={7} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{task.description ?? ''}</textarea><InputError message={errors.description} /></div>
                             <div class="grid gap-4 sm:grid-cols-2"><div class="grid gap-2"><Label for="task-priority">Priority</Label><select id="task-priority" name="priority" value={task.priority ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tidak ada</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select><InputError message={errors.priority} /></div><div class="grid gap-2"><Label for="task-due-date">Deadline</Label><Input id="task-due-date" name="due_date" type="date" value={task.due_date ?? ''} /><InputError message={errors.due_date} /></div></div>
                             <div class="grid gap-2"><Label for="task-milestone">Milestone</Label><select id="task-milestone" name="milestone_id" value={task.milestone?.id ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tanpa milestone</option>{#each milestones as milestone (milestone.id)}<option value={milestone.id}>{milestone.name}</option>{/each}</select><InputError message={errors.milestone_id} /></div>
                             <div class="flex justify-end"><Button type="submit" disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan perubahan'}</Button></div>
@@ -145,7 +147,7 @@
                             <article class="rounded-md border bg-muted/20 p-4">
                                 <div class="flex items-center justify-between gap-3"><p class="text-sm font-medium">{comment.user?.name ?? 'Pengguna'}</p>{#if comment.can_delete}<Form {...CommentController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, comment: comment.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</div>
                                 <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{comment.body}</p>
-                                <p class="mt-2 text-xs text-muted-foreground">{comment.created_at ?? ''}</p>
+                                <p class="mt-2 text-xs text-muted-foreground">{formatDateTime(comment.created_at, workspaceTimezone)}</p>
                             </article>
                         {/each}
                     {/if}
@@ -167,12 +169,12 @@
 
             <section class="rounded-lg border bg-card p-5 sm:p-6">
                 <h2 class="text-sm font-semibold">Activity Log</h2>
-                {#if activities.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada aktivitas.</p>{:else}<ol class="mt-5 grid gap-4 border-l pl-4">{#each activities as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {activity.created_at ?? ''}</p></li>{/each}</ol>{/if}
+                {#if activities.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada aktivitas.</p>{:else}<ol class="mt-5 grid gap-4 border-l pl-4">{#each activities as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {formatDateTime(activity.created_at, workspaceTimezone)}</p></li>{/each}</ol>{/if}
             </section>
         </div>
 
         <aside class="rounded-lg border bg-card p-5 lg:sticky lg:top-4 lg:self-start">
-            <div class="flex items-center justify-between gap-3"><h2 class="text-sm font-semibold">Context Task</h2><span class="font-mono text-[11px] text-muted-foreground">{task.identifier}</span></div>
+            <div class="flex items-center justify-between gap-3"><h2 class="text-sm font-semibold">Konteks Task</h2><span class="font-mono text-[11px] text-muted-foreground">{task.identifier}</span></div>
             {#if canAssign}
                 <Form {...TaskController.assign.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-2">
                     {#snippet children({ errors, processing })}
@@ -199,7 +201,7 @@
                     {/snippet}
                 </Form>
             {/if}
-            <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{task.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat oleh</dt><dd class="mt-1 font-medium">{task.creator?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Deadline</dt><dd class="mt-1 font-medium">{task.due_date ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat</dt><dd class="mt-1 font-medium">{task.created_at ?? '—'}</dd></div></dl>
+            <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{task.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat oleh</dt><dd class="mt-1 font-medium">{task.creator?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Deadline</dt><dd class="mt-1 font-medium">{formatDate(task.due_date, workspaceTimezone)}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat</dt><dd class="mt-1 font-medium">{formatDate(task.created_at, workspaceTimezone)}</dd></div></dl>
         </aside>
     </div>
 </div>

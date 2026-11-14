@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
         $operations = User::factory()->create(['name' => 'Sari Operasional', 'email' => 'sari@example.com']);
         $reviewer = User::factory()->create(['name' => 'Raka Reviewer', 'email' => 'raka@example.com']);
 
-        $workspace = app(CreateWorkspace::class)->handle($owner, 'sitop Demo Workspace', 'Asia/Jakarta');
+        $workspace = app(CreateWorkspace::class)->handle($owner, 'ithub Demo Workspace', 'Asia/Jakarta');
         foreach ([$developer, $infra, $operations, $reviewer] as $member) {
             $workspace->memberships()->create(['user_id' => $member->id, 'role' => 'member', 'invited_by_id' => $owner->id, 'joined_at' => now()]);
         }
@@ -92,7 +92,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $owner->forceFill(['active_workspace_id' => $workspace->id])->save();
-        $developer->notify(new TaskNotification('welcome', 'Selamat datang di sitop', 'Workspace demo sudah siap untuk dieksplorasi.', route('dashboard')));
+        $developer->notify(new TaskNotification('welcome', 'Selamat datang di ithub', 'Workspace demo sudah siap untuk dieksplorasi.', route('dashboard')));
     }
 
     private function createProject(User $owner, Workspace $workspace, string $unitId, string $name, string $identifier, string $description, User $lead, string $status, string $targetDate): Project

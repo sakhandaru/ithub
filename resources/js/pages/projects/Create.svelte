@@ -103,7 +103,7 @@
                         <InputError message={errors.project_lead_id} />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="default-assignee">Default Assignee <span class="font-normal text-muted-foreground">(opsional)</span></Label>
+                        <Label for="default-assignee">PIC default <span class="font-normal text-muted-foreground">(opsional)</span></Label>
                         <select id="default-assignee" name="default_assignee_id" class="h-11 rounded-md border border-input bg-background px-3 text-sm">
                             <option value="">Tidak ada</option>
                             {#each members as member (member.id)}

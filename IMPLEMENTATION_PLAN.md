@@ -18,37 +18,19 @@ Persentase adalah ukuran kematangan kemampuan produk, bukan jumlah file, migrati
 
 ## 2. Kondisi saat ini
 
-Status saat ini: **100%**.
+Status saat ini: **MVP Core dan MVP Follow-up selesai 100%; siap untuk pilot penggunaan nyata**.
 
 Yang sudah tersedia:
 
-- autentikasi dan session dari starter kit;
-- kewajiban verifikasi email dapat dimatikan melalui konfigurasi;
-- nama aplikasi menggunakan `sitop`;
-- application shell dengan navigasi dua tingkat;
-- primary rail untuk Pekerjaan dan Pengaturan;
-- context sidebar yang dapat dilipat;
-- pola drawer mobile dari komponen sidebar;
-- dashboard awal dengan empty state tanpa data palsu;
-- halaman pengaturan akun bawaan;
-- fondasi dark mode, focus state, dan pointer affordance;
-- `PRD.md` dan `DESIGN.md` sebagai sumber keputusan;
-- enum dasar role, visibility, status, dan priority;
-- request context untuk actor, request ID, dan timezone;
-- konfigurasi attachment privat dan batas file;
-- keputusan teknis fondasi domain untuk fase berikutnya;
-- Workspace, Unit, membership, role, dan active Workspace;
-- halaman onboarding dan pengaturan Workspace;
-- authorization backend dan isolasi direct-object;
-- Audit Log minimum untuk perubahan membership dan Unit.
+- seluruh MVP Core sesuai Fase 0–7;
+- Sub-task, relasi antar-Task, dan milestone;
+- Dashboard Workspace berbasis data;
+- Global Search, filter lanjutan, dan notifikasi in-app;
+- responsive layout, empty/error/unauthorized/archived state utama;
+- authorization backend, Activity Log, Audit Log, dan test permission;
+- audit UX P1–P3 untuk dialog, sheet, navigasi, timestamp, dan Saved View lokal.
 
-Yang belum tersedia:
-
-- komentar, attachment, bukti, Activity Log, dan layar Audit Log lengkap;
-- List, Board, side peek, serta detail Project dan Task;
-- dashboard berbasis data;
-- Global Search, filter lanjutan, dan notifikasi;
-- seluruh kemampuan MVP Follow-up.
+Tidak ada item MVP Follow-up yang tertunda. Saved View lokal tetap dipertahankan hanya sebagai sumber migrasi yang dipicu user; penyimpanan aktif sudah memakai backend.
 
 ## 3. Aturan eksekusi setiap fase
 
@@ -80,9 +62,13 @@ Satu fase belum selesai jika hanya frontend atau backend yang tersedia. Fase dia
 | 7 | Board, dashboard Project, hardening, dan pilot Core | 85% |
 | 8 | Sub-task, relasi, dan milestone | 91% |
 | 9 | Dashboard Workspace, search, filter, dan notifikasi | 97% |
-| 10 | State lengkap, archive lanjutan, optimasi, dan pilot akhir | 100% |
+| 10 | State lengkap, archive lanjutan, optimasi, dan pilot Core | 98% |
+| 11 | Fondasi Saved View backend | 99% |
+| 12 | CRUD Saved View dan permission | 99% |
+| 13 | Sinkronisasi UI Saved View dan migrasi lokal | 99% |
+| 14 | Validasi akhir MVP Follow-up dan pilot | 100% |
 
-MVP Core selesai pada akhir Fase 7. MVP Follow-up selesai pada akhir Fase 10.
+MVP Core selesai pada akhir Fase 7. MVP Follow-up yang tersisa selesai pada akhir Fase 14.
 
 ## 5. Fase 0: Baseline dan application shell
 
@@ -813,7 +799,151 @@ Audit setiap layar untuk state yang relevan:
 - kriteria keberhasilan pilot memiliki hasil terukur;
 - fitur di luar MVP tetap tidak muncul sebagai kontrol aktif.
 
-## 16. Gate kualitas wajib
+## 16. Fase 11: Fondasi Saved View backend
+
+Progress: **98% sampai 99%**.
+
+Status: **selesai**.
+
+### Tujuan
+
+Mengubah Saved View dari preferensi browser menjadi objek aplikasi yang memiliki scope, ownership, dan lifecycle yang jelas.
+
+### Model data
+
+- Saved View dengan ULID;
+- Workspace, Project, dan user pembuat;
+- nama;
+- query filter terserialisasi;
+- sorting;
+- grouping;
+- density atau compact mode;
+- timestamps dan archive bila diperlukan.
+
+### Aturan bisnis
+
+- Saved View terhubung ke satu Project dan satu user;
+- nama unik untuk user dalam Project yang sama;
+- Saved View pribadi tidak terlihat oleh user lain;
+- filter hanya boleh memakai data yang dapat diakses user;
+- status, PIC, label, atau milestone yang sudah tidak tersedia tidak boleh menyebabkan error fatal;
+- kemampuan berbagi Saved View belum termasuk fase ini.
+
+### Test minimum
+
+- migration dan factory Saved View;
+- user tidak dapat membaca atau mengubah Saved View user lain;
+- user tidak dapat mengakses Saved View dari Project lain;
+- duplicate name ditolak sesuai scope;
+- payload query divalidasi dan tidak dapat memperluas permission.
+
+### Exit criteria
+
+- schema, relation, Policy, dan query scope tersedia;
+- ownership dan permission tertulis dalam test;
+- format payload Saved View stabil untuk dipakai endpoint dan frontend.
+
+## 17. Fase 12: CRUD Saved View dan permission
+
+Progress: **99%**.
+
+Status: **selesai**.
+
+### Backend
+
+- endpoint create, update, delete, dan list Saved View;
+- Form Request untuk nama dan payload view;
+- action dengan transaction untuk operasi yang memerlukan lebih dari satu perubahan;
+- response scoped ke Project aktif;
+- audit atau Activity Log untuk create, update, dan delete bila relevan.
+
+### UI contract
+
+- route memakai Wayfinder;
+- response sukses dan validation error tersedia;
+- delete tetap memerlukan konfirmasi;
+- view yang tidak lagi valid menampilkan feedback dan tidak memblokir halaman.
+
+### Test minimum
+
+- create, update, delete, dan list;
+- unauthorized role dan direct-object reference;
+- duplicate name;
+- payload filter yang merujuk object lintas scope;
+- delete tidak menghapus Task atau data lain.
+
+### Exit criteria
+
+- Saved View dapat dikelola melalui endpoint nyata;
+- seluruh endpoint memiliki authorization backend;
+- test feature dan permission lulus.
+
+## 18. Fase 13: Sinkronisasi UI Saved View dan migrasi lokal
+
+Progress: **99%**.
+
+Status: **selesai**.
+
+### Frontend
+
+- ganti penyimpanan utama dari `localStorage` ke endpoint backend;
+- tampilkan Saved View milik user pada Project yang sedang aktif;
+- buat, buka, ubah, dan hapus Saved View;
+- loading, saved, validation failed, network failed, dan empty state;
+- pertahankan dialog konfirmasi hapus;
+- tampilkan feedback ketika filter lama sudah tidak tersedia.
+
+### Migrasi lokal
+
+- deteksi Saved View lama di browser;
+- tawarkan migrasi satu kali ke backend;
+- jangan mengirim data tanpa tindakan eksplisit user;
+- hapus data lokal hanya setelah migrasi berhasil atau user memilih mengabaikannya.
+
+### Responsive dan accessibility
+
+- Saved View dapat ditemukan dari toolbar Task dan konteks Project;
+- keyboard dapat membuka, memilih, dan menghapus view;
+- active state tidak hanya mengandalkan warna;
+- mobile tidak mengalami overflow pada daftar view.
+
+### Exit criteria
+
+- Saved View bertahan setelah logout, login ulang, atau berpindah perangkat;
+- tidak ada write baru ke `localStorage` untuk Saved View;
+- seluruh state UI relevan tersedia pada desktop, tablet, dan mobile.
+
+## 19. Fase 14: Validasi akhir MVP Follow-up dan pilot
+
+Progress: **99% sampai 100%**.
+
+Status: **selesai**.
+
+### Validasi produk
+
+- verifikasi seluruh checklist MVP Follow-up pada PRD;
+- uji Dashboard Workspace, Search, filter, notifikasi, Sub-task, relasi, milestone, dan Saved View sebagai satu alur kerja;
+- uji permission lintas Workspace, Unit, Project, dan user;
+- uji Project archived/read-only dan restore;
+- uji data Saved View yang mengacu object yang sudah dihapus atau diarsipkan.
+
+### Pilot
+
+- jalankan pada Project Development, Infra, dan Operasional;
+- buat Saved View nyata untuk kebutuhan tiap Unit;
+- ukur apakah user dapat menemukan Task tanpa membuat filter berulang;
+- catat masalah usability, performa, dan permission;
+- tetapkan backlog pasca-MVP berdasarkan hasil pilot.
+
+### Exit criteria
+
+- seluruh scope MVP Follow-up pada PRD selesai;
+- Saved View dapat dibuat, dibuka kembali, diubah, dan dihapus lintas sesi;
+- tidak ada critical permission, data loss, atau audit defect;
+- test, type check, build, dan QA responsive lulus;
+- fitur di luar MVP tidak muncul sebagai kontrol aktif.
+
+## 20. Gate kualitas wajib
 
 Gate berikut berlaku pada setiap fase, bukan hanya menjelang 100%.
 
@@ -861,7 +991,7 @@ npm run build
 
 Tambahkan pemeriksaan browser untuk route, form, dialog, keyboard, responsive layout, dan failure path yang diubah pada fase tersebut.
 
-## 17. Urutan implementasi dalam satu fase
+## 21. Urutan implementasi dalam satu fase
 
 Untuk menghindari halaman yang tampak selesai tetapi belum aman, gunakan urutan vertikal berikut:
 
@@ -889,7 +1019,7 @@ Build dan browser verification
 
 Satu kemampuan diselesaikan secara end-to-end sebelum berpindah ke kemampuan lain. Contoh, `Create Project` diselesaikan dari migration sampai browser verification sebelum mengerjakan `Archive Project`.
 
-## 18. Urutan batch eksekusi yang disarankan
+## 22. Urutan batch eksekusi yang disarankan
 
 Setiap batch idealnya cukup kecil untuk ditinjau dan diuji secara mandiri.
 
@@ -949,23 +1079,31 @@ Setiap batch idealnya cukup kecil untuk ditinjau dan diuji secara mandiri.
 4. Dashboard Workspace dan workload.
 5. Global Search dan filter lanjutan.
 6. Notifikasi in-app.
-7. State, archive, performance, dan pilot akhir.
+7. State, archive, performance, dan pilot Core.
+8. Fondasi Saved View backend.
+9. CRUD Saved View dan permission.
+10. Sinkronisasi UI Saved View dan migrasi lokal.
+11. Validasi akhir MVP Follow-up dan pilot.
 
-## 19. Progress checklist
+## 23. Progress checklist
 
 - [x] Fase 0: Baseline dan application shell, 10%.
-- [ ] Fase 1: Fondasi domain dan kualitas teknis, 15%.
-- [ ] Fase 2: Workspace, Unit, membership, dan role, 25%.
-- [ ] Fase 3: Project dan lifecycle Project, 40%.
-- [ ] Fase 4: Task engine dan workflow, 58%.
-- [ ] Fase 5: List, detail, dan side peek Task, 70%.
-- [ ] Fase 6: Kolaborasi, bukti, Activity Log, dan Audit Log, 80%.
-- [ ] Fase 7: Board, dashboard Project, hardening, dan pilot Core, 85%.
+- [x] Fase 1: Fondasi domain dan kualitas teknis, 15%.
+- [x] Fase 2: Workspace, Unit, membership, dan role, 25%.
+- [x] Fase 3: Project dan lifecycle Project, 40%.
+- [x] Fase 4: Task engine dan workflow, 58%.
+- [x] Fase 5: List, detail, dan side peek Task, 70%.
+- [x] Fase 6: Kolaborasi, bukti, Activity Log, dan Audit Log, 80%.
+- [x] Fase 7: Board, dashboard Project, hardening, dan pilot Core, 85%.
 - [x] Fase 8: Sub-task, relasi, dan milestone, 91%.
 - [x] Fase 9: Dashboard Workspace, search, filter, dan notifikasi, 97%.
-- [x] Fase 10: State lengkap, archive lanjutan, optimasi, dan pilot akhir, 100%.
+- [x] Fase 10: State lengkap, archive lanjutan, optimasi, dan pilot Core, 98%.
+- [x] Fase 11: Fondasi Saved View backend, 99%.
+- [x] Fase 12: CRUD Saved View dan permission, 99%.
+- [x] Fase 13: Sinkronisasi UI Saved View dan migrasi lokal, 99%.
+- [x] Fase 14: Validasi akhir MVP Follow-up dan pilot, 100%.
 
-## 20. Aturan perubahan rencana
+## 24. Aturan perubahan rencana
 
 - Perubahan urutan yang memengaruhi model data, role, permission, atau scope harus dicatat sebagai keputusan.
 - Fitur baru tidak boleh dimasukkan ke MVP tanpa memperbarui PRD dan rencana ini.

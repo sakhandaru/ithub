@@ -5,7 +5,7 @@ import SettingsLayout from '@/layouts/settings/Layout.svelte';
 import { initializeFlashToast } from '@/lib/flash-toast';
 import { initializeTheme } from '@/lib/theme.svelte';
 
-const appName = import.meta.env.VITE_APP_NAME || 'sitop';
+const appName = import.meta.env.VITE_APP_NAME || 'ithub';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

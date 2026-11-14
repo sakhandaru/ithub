@@ -129,6 +129,12 @@ class Project extends Model
         return $this->hasMany(TaskRelation::class);
     }
 
+    /** @return HasMany<SavedView, $this> */
+    public function savedViews(): HasMany
+    {
+        return $this->hasMany(SavedView::class);
+    }
+
     /** @return HasMany<ActivityLog, $this> */
     public function activityLogs(): HasMany
     {

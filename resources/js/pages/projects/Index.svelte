@@ -2,7 +2,7 @@
     import { index } from '@/routes/workspaces/projects';
 
     export const layout = {
-        breadcrumbs: [{ title: 'Projects', href: index('') }],
+        breadcrumbs: [{ title: 'Project', href: index('') }],
     };
 </script>
 
@@ -22,13 +22,13 @@
     let { workspace, projects, showArchived }: { workspace: Workspace; projects: ProjectSummary[]; showArchived: boolean } = $props();
 </script>
 
-<AppHead title="Projects" />
+<AppHead title="Project" />
 
 <div class="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
     <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="text-sm text-muted-foreground">{workspace.name}</p>
-            <h1 class="mt-1 text-xl font-semibold tracking-tight">{showArchived ? 'Project arsip' : 'Projects'}</h1>
+            <h1 class="mt-1 text-xl font-semibold tracking-tight">{showArchived ? 'Project arsip' : 'Project'}</h1>
             <p class="mt-1 text-sm leading-6 text-muted-foreground">Konteks utama untuk mengelola kumpulan Task.</p>
         </div>
         <div class="flex flex-wrap gap-2">

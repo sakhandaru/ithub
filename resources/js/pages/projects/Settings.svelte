@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-    import { Form } from '@inertiajs/svelte';
+    import { Form, page } from '@inertiajs/svelte';
     import Trash2 from '@lucide/svelte/icons/trash-2';
     import ProjectMemberController from '@/actions/App/Http/Controllers/ProjectMemberController';
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
@@ -15,6 +15,7 @@
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
+    import { formatDateTime } from '@/lib/format-date';
     import type { ProjectMember, ProjectOption } from '@/types';
 
     type Workspace = { id: string; name: string };
@@ -66,6 +67,7 @@
         canRestore: boolean;
         milestones: Milestone[];
     } = $props();
+    const workspaceTimezone = $derived(page.props.workspaceContext?.active?.timezone);
 
     function confirmRemoval(event: MouseEvent, name: string): void {
         if (!window.confirm(`Hapus ${name} dari Project?`)) {
@@ -138,7 +140,7 @@
                                     <InputError message={errors.project_lead_id} />
                                 </div>
                                 <div class="grid gap-2">
-                                    <Label for="default-assignee">Default Assignee</Label>
+                                    <Label for="default-assignee">PIC default</Label>
                                     <select id="default-assignee" name="default_assignee_id" value={project.default_assignee_id ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm">
                                         <option value="">Tidak ada</option>
                                         {#each members as member (member.id)}<option value={member.id}>{member.name}</option>{/each}
@@ -164,7 +166,7 @@
         </section>
 
         <section class="rounded-lg border bg-card p-5 sm:p-6">
-            <h2 class="text-base font-semibold">Milestone</h2>
+            <h2 id="milestones" class="text-base font-semibold scroll-mt-6">Milestone</h2>
             <p class="mt-1 text-sm text-muted-foreground">Kelompokkan Task berdasarkan target penting Project.</p>
             {#if canManage}
                 <Form {...MilestoneController.store.form({ workspace: workspace.id, project: project.id })} class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -184,7 +186,7 @@
         <section class="rounded-lg border bg-card p-5 sm:p-6">
             <h2 class="text-base font-semibold">Audit Log</h2>
             <p class="mt-1 text-sm text-muted-foreground">Perubahan penting Project dan membership.</p>
-            {#if auditLogs.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada Audit Log.</p>{:else}<ol class="mt-5 grid gap-3 border-l pl-4">{#each auditLogs as log (log.id)}<li><p class="text-sm font-medium">{log.action}</p><p class="mt-1 text-xs text-muted-foreground">{log.actor?.name ?? 'Sistem'} · {log.created_at}</p></li>{/each}</ol>{/if}
+            {#if auditLogs.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada Audit Log.</p>{:else}<ol class="mt-5 grid gap-3 border-l pl-4">{#each auditLogs as log (log.id)}<li><p class="text-sm font-medium">{log.action}</p><p class="mt-1 text-xs text-muted-foreground">{log.actor?.name ?? 'Sistem'} · {formatDateTime(log.created_at, workspaceTimezone)}</p></li>{/each}</ol>{/if}
         </section>
     {/if}
 
