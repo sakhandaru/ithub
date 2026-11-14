@@ -11,9 +11,11 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskRelationType;
 use App\Enums\TaskStatus;
 use App\Http\Requests\AssignTaskRequest;
+use App\Http\Requests\BulkUpdateTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Project;
+use App\Models\SavedView;
 use App\Models\Task;
 use App\Models\TaskRelation;
 use App\Models\User;
@@ -39,6 +41,34 @@ class TaskController extends Controller
         $search = trim($request->string('search')->toString());
         $sort = $request->string('sort', 'created_at')->toString();
         $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
+        $activeSavedView = SavedView::query()
+            ->forProject($project)
+            ->forUser($request->user())
+            ->whereKey($request->string('view')->toString())
+            ->first();
+        $savedViewWarnings = [];
+
+        if ($activeSavedView) {
+            if ($status !== '' && ! collect(TaskStatus::cases())->contains(fn (TaskStatus $item): bool => $item->value === $status)) {
+                $savedViewWarnings[] = 'status';
+                $status = '';
+            }
+
+            if ($priority !== '' && ! collect(TaskPriority::cases())->contains(fn (TaskPriority $item): bool => $item->value === $priority)) {
+                $savedViewWarnings[] = 'priority';
+                $priority = '';
+            }
+
+            if ($assignee !== '' && $assignee !== 'none' && ! $project->memberships()->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])->where('user_id', $assignee)->exists()) {
+                $savedViewWarnings[] = 'assignee';
+                $assignee = '';
+            }
+
+            if ($milestone !== '' && $milestone !== 'none' && ! $project->milestones()->whereKey($milestone)->exists()) {
+                $savedViewWarnings[] = 'milestone';
+                $milestone = '';
+            }
+        }
 
         $tasks = $project->tasks()
             ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
@@ -77,10 +107,25 @@ class TaskController extends Controller
             'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
-            'filterMembers' => $project->memberships()->with('user:id,name')->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name])->values(),
+            'filterMembers' => $project->memberships()->with('user:id,name')->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name])->values(),
             'filterMilestones' => $project->milestones()->orderBy('name')->get(['id', 'name']),
+            'savedViews' => $project->savedViews()
+                ->forUser($request->user())
+                ->orderBy('name')
+                ->get()
+                ->map(fn (SavedView $savedView): array => [
+                    'id' => $savedView->id,
+                    'name' => $savedView->name,
+                    'filters' => $savedView->filters,
+                    'grouping' => $savedView->grouping,
+                    'compact' => $savedView->compact,
+                ])
+                ->values(),
+            'activeSavedViewId' => $activeSavedView?->id,
+            'savedViewWarnings' => $savedViewWarnings,
             'canCreate' => $request->user()->can('create', [Task::class, $project]),
             'canManage' => $request->user()->can('update', $selectedTask ?? $project),
+            'canBulkUpdate' => $request->user()->can('update', $project),
         ]);
     }
 
@@ -199,6 +244,29 @@ class TaskController extends Controller
     {
         $updateTask->handle($request->user(), $task, $request->validated());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Task berhasil diperbarui.']);
+
+        return back();
+    }
+
+    public function bulkUpdate(BulkUpdateTasksRequest $request, Workspace $workspace, Project $project, UpdateTask $updateTask, AssignTask $assignTask): RedirectResponse
+    {
+        $validated = $request->validated();
+        $actor = $request->user();
+        $assignee = array_key_exists('assignee_id', $validated) && $validated['assignee_id'] !== null
+            ? User::query()->whereKey($validated['assignee_id'])->firstOrFail()
+            : null;
+
+        foreach ($project->tasks()->whereIn('id', $validated['task_ids'])->get() as $task) {
+            Gate::authorize('update', $task);
+            if (array_key_exists('priority', $validated)) {
+                $updateTask->handle($actor, $task, ['priority' => $validated['priority']]);
+            }
+            if (array_key_exists('assignee_id', $validated)) {
+                $assignTask->handle($actor, $task, $assignee);
+            }
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => count($validated['task_ids']).' Task berhasil diperbarui.']);
 
         return back();
     }

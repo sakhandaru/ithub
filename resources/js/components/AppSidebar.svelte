@@ -1,15 +1,19 @@
 <script lang="ts">
     import { Link } from '@inertiajs/svelte';
+    import { onMount } from 'svelte';
     import BriefcaseBusiness from '@lucide/svelte/icons/briefcase-business';
     import FolderKanban from '@lucide/svelte/icons/folder-kanban';
     import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
     import Palette from '@lucide/svelte/icons/palette';
     import Search from '@lucide/svelte/icons/search';
     import Bell from '@lucide/svelte/icons/bell';
+    import Activity from '@lucide/svelte/icons/activity';
+    import Flag from '@lucide/svelte/icons/flag';
     import Settings from '@lucide/svelte/icons/settings';
     import ShieldCheck from '@lucide/svelte/icons/shield-check';
     import UserRound from '@lucide/svelte/icons/user-round';
     import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.svelte';
+    import AppLogo from '@/components/AppLogo.svelte';
     import type { Snippet } from 'svelte';
     import NavUser from '@/components/NavUser.svelte';
     import { Sidebar, useSidebar } from '@/components/ui/sidebar';
@@ -28,6 +32,7 @@
     import { show as projectSettings } from '@/routes/workspaces/projects/settings';
     import { page } from '@inertiajs/svelte';
     import { toUrl } from '@/lib/utils';
+    import CommandPalette from '@/components/CommandPalette.svelte';
 
     let {
         children,
@@ -40,8 +45,20 @@
     const workspaceContext = $derived(page.props.workspaceContext);
     const projectContext = $derived(page.props.projectContext);
     const unreadCount = $derived(page.props.notifications?.unread_count ?? 0);
+    const savedViews = $derived(page.props.savedViews ?? []);
+    const activeSavedViewId = $derived(new URL(page.url, 'http://localhost').searchParams.get('view'));
+    let currentHash = $state('');
     const isWorkspaceSettings = $derived(url.currentUrl.startsWith('/workspaces/') && url.currentUrl.endsWith('/settings'));
     const isSettings = $derived(url.currentUrl.startsWith('/settings') || isWorkspaceSettings);
+    const isMilestoneActive = $derived(currentHash === '#milestones' && url.currentUrl.endsWith('/settings'));
+    const isActivityActive = $derived(currentHash === '#activity-log' && url.currentUrl.includes('/projects/'));
+
+    onMount(() => {
+        const updateHash = (): void => { currentHash = window.location.hash; };
+        updateHash();
+        window.addEventListener('hashchange', updateHash);
+        return () => window.removeEventListener('hashchange', updateHash);
+    });
 
     function closeMobileNavigation(): void {
         if ($isMobile) {
@@ -56,15 +73,6 @@
             class="flex w-14 shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-2"
             aria-label="Area utama"
         >
-            <Link
-                href={toUrl(dashboard())}
-                class="mb-3 flex size-11 items-center justify-center rounded-md text-sm font-bold tracking-tight text-sidebar-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                aria-label="Beranda sitop"
-                onclick={closeMobileNavigation}
-            >
-                ST
-            </Link>
-
             <div class="flex w-full flex-1 flex-col items-center gap-1">
                 <Link
                     href={toUrl(dashboard())}
@@ -112,10 +120,14 @@
             class="flex min-w-0 flex-1 flex-col bg-sidebar group-data-[collapsible=icon]:hidden"
         >
             <div class="shrink-0 border-b border-sidebar-border p-2">
-                <div class="flex items-center gap-2 px-2.5 pb-2">
-                    <span class="text-sm font-bold tracking-tight">ST</span>
-                    <span class="text-sm font-semibold tracking-tight">sitop</span>
-                </div>
+                <Link
+                    href={toUrl(dashboard())}
+                    class="flex min-h-14 items-center px-2.5 pb-3 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    aria-label="Beranda ithub"
+                    onclick={closeMobileNavigation}
+                >
+                    <AppLogo />
+                </Link>
                 <WorkspaceSwitcher />
                 <nav class="mt-2 grid gap-1 border-t border-sidebar-border pt-2" aria-label="Akses cepat">
                     <Link
@@ -267,6 +279,24 @@
                                 <LayoutDashboard class="size-4" aria-hidden="true" />
                                 Dashboard
                             </Link>
+                            <Link
+                                href={toUrl(projectSettings([projectContext.active.workspace_id, projectContext.active.id]) + '#milestones')}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isMilestoneActive ? 'bg-sidebar-accent font-medium' : ''}"
+                                aria-current={isMilestoneActive ? 'page' : undefined}
+                                onclick={closeMobileNavigation}
+                            >
+                                <Flag class="size-4" aria-hidden="true" />
+                                Milestone
+                            </Link>
+                            <Link
+                                href={toUrl(projectShow([projectContext.active.workspace_id, projectContext.active.id]) + '#activity-log')}
+                                class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isActivityActive ? 'bg-sidebar-accent font-medium' : ''}"
+                                aria-current={isActivityActive ? 'page' : undefined}
+                                onclick={closeMobileNavigation}
+                            >
+                                <Activity class="size-4" aria-hidden="true" />
+                                Activity Log
+                            </Link>
                         {:else}
                             <Link
                                 href={toUrl(dashboard())}
@@ -279,6 +309,25 @@
                             </Link>
                         {/if}
                     </nav>
+
+                    {#if projectContext.active && savedViews.length > 0}
+                        <div class="mt-6">
+                            <p class="px-2 pb-2 text-xs font-medium text-muted-foreground">Saved View</p>
+                            <nav class="grid gap-1" aria-label="Saved View">
+                                {#each savedViews as view (view.id)}
+                                    <Link
+                                        href={toUrl(TaskController.index({ workspace: projectContext.active.workspace_id, project: projectContext.active.id }, { query: { ...view.filters, view: view.id } }))}
+                                        class="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {activeSavedViewId === view.id ? 'bg-sidebar-accent font-medium' : 'text-muted-foreground'}"
+                                        aria-current={activeSavedViewId === view.id ? 'page' : undefined}
+                                        onclick={closeMobileNavigation}
+                                    >
+                                        <FolderKanban class="size-4 shrink-0" aria-hidden="true" />
+                                        <span class="min-w-0 truncate" title={view.name}>{view.name}</span>
+                                    </Link>
+                                {/each}
+                            </nav>
+                        </div>
+                    {/if}
 
                     {#if !projectContext.active}
                     <div class="mt-7">
@@ -321,4 +370,5 @@
         </div>
     </div>
 </Sidebar>
+<CommandPalette />
 {@render children?.()}

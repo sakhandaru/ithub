@@ -3,6 +3,7 @@
 use App\Actions\Projects\CreateProject;
 use App\Actions\Tasks\CreateTask;
 use App\Actions\Workspaces\CreateWorkspace;
+use App\Models\SavedView;
 use App\Models\Task;
 use App\Models\User;
 
@@ -61,6 +62,34 @@ test('task route does not expose a task from another project', function () {
         ->assertNotFound();
 });
 
+test('project admin can bulk update task priority and PIC', function () {
+    $owner = User::factory()->create();
+    $contributor = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $workspace->memberships()->create(['user_id' => $contributor->id, 'role' => 'member', 'invited_by_id' => $owner->id, 'joined_at' => now()]);
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $project->memberships()->create(['user_id' => $contributor->id, 'role' => 'contributor', 'joined_at' => now()]);
+    $first = app(CreateTask::class)->handle($owner, $project, ['title' => 'Task pertama']);
+    $second = app(CreateTask::class)->handle($owner, $project, ['title' => 'Task kedua']);
+
+    $this->actingAs($owner)
+        ->post(route('workspaces.projects.tasks.bulk-update', [$workspace, $project]), [
+            'task_ids' => [$first->id, $second->id],
+            'priority' => 'high',
+            'assignee_id' => $contributor->id,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($first->fresh()->priority->value)->toBe('high')
+        ->and($first->fresh()->assignee_id)->toBe($contributor->id)
+        ->and($second->fresh()->priority->value)->toBe('high')
+        ->and($second->fresh()->assignee_id)->toBe($contributor->id);
+});
+
 test('task list filters by search and exposes a selected side peek task', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
@@ -106,6 +135,57 @@ test('task list supports triage presets', function () {
             ->has('tasks', 1)
             ->where('tasks.0.id', $blockedTask->id)
             ->where('filters.preset', 'blocked'));
+});
+
+test('task list exposes only the current users saved view as active', function () {
+    $owner = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $savedView = SavedView::factory()->create([
+        'workspace_id' => $workspace->id,
+        'project_id' => $project->id,
+        'user_id' => $owner->id,
+    ]);
+    $otherView = SavedView::factory()->create([
+        'workspace_id' => $workspace->id,
+        'project_id' => $project->id,
+        'user_id' => $otherUser->id,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.index', [$workspace, $project]).'?view='.$savedView->id)
+        ->assertInertia(fn ($page) => $page->where('activeSavedViewId', $savedView->id));
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.index', [$workspace, $project]).'?view='.$otherView->id)
+        ->assertInertia(fn ($page) => $page->where('activeSavedViewId', null));
+});
+
+test('task list ignores unavailable saved view filters with feedback', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    app(CreateTask::class)->handle($owner, $project, ['title' => 'Task tetap terlihat']);
+    $savedView = SavedView::factory()->create([
+        'workspace_id' => $workspace->id,
+        'project_id' => $project->id,
+        'user_id' => $owner->id,
+        'filters' => ['status' => 'removed-status'],
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.index', [$workspace, $project]).'?view='.$savedView->id.'&status=removed-status')
+        ->assertInertia(fn ($page) => $page
+            ->has('tasks', 1)
+            ->where('filters.status', '')
+            ->where('savedViewWarnings.0', 'status'));
 });
 
 test('task detail page loads the same task context', function () {
