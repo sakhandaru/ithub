@@ -1,9 +1,10 @@
 <script lang="ts">
     import { Link } from '@inertiajs/svelte';
     import type { Snippet } from 'svelte';
-    import Heading from '@/components/Heading.svelte';
-    import { Button } from '@/components/ui/button';
-    import { Separator } from '@/components/ui/separator';
+    import UserRound from 'carbon-icons-svelte/lib/UserAvatarFilled.svelte';
+    import ShieldCheck from 'carbon-icons-svelte/lib/Security.svelte';
+    import SunMedium from 'carbon-icons-svelte/lib/Sun.svelte';
+    import PageHeader from '@/components/PageHeader.svelte';
     import { currentUrlState } from '@/lib/currentUrl.svelte';
     import { toUrl } from '@/lib/utils';
     import { edit as editAppearance } from '@/routes/appearance';
@@ -21,59 +22,40 @@
         {
             title: 'Profil',
             href: editProfile(),
+            icon: UserRound,
         },
         {
             title: 'Keamanan',
             href: editSecurity(),
+            icon: ShieldCheck,
         },
         {
             title: 'Tampilan',
             href: editAppearance(),
+            icon: SunMedium,
         },
     ];
 
     const url = currentUrlState();
 </script>
 
-<div class="px-4 py-6">
-    <Heading
-        title="Pengaturan"
-        description="Kelola profil, keamanan, dan tampilan akun Anda."
-    />
+<div class="flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+    <PageHeader title="Pengaturan" description="Kelola profil, keamanan, dan preferensi tampilan akun Anda." />
 
-    <div class="flex flex-col lg:flex-row lg:space-x-12">
-        <aside class="w-full max-w-xl lg:w-48">
-            <nav
-                class="flex flex-col space-y-1 space-x-0"
-                aria-label="Pengaturan"
-            >
+    <div class="grid min-w-0 gap-6 lg:grid-cols-[13rem_minmax(0,42rem)] lg:items-start lg:gap-10">
+        <aside class="min-w-0">
+            <nav class="flex gap-1 overflow-x-auto lg:grid lg:gap-1" aria-label="Pengaturan akun">
                 {#each sidebarNavItems as item (toUrl(item.href))}
-                    <Button
-                        variant="ghost"
-                        class="w-full justify-start {url.isCurrentUrl(
-                            item.href,
-                            url.currentUrl,
-                        )
-                            ? 'bg-muted'
-                            : ''}"
-                        asChild
-                    >
-                        {#snippet children(props)}
-                            <Link href={toUrl(item.href)} class={props.class}>
-                                {item.title}
-                            </Link>
-                        {/snippet}
-                    </Button>
+                    <Link href={toUrl(item.href)} class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {url.isCurrentUrl(item.href, url.currentUrl) ? 'bg-accent font-medium text-accent-foreground' : 'text-muted-foreground'}">
+                        <item.icon class="size-4" />
+                        {item.title}
+                    </Link>
                 {/each}
             </nav>
         </aside>
 
-        <Separator class="my-6 lg:hidden" />
-
-        <div class="flex-1 md:max-w-2xl">
-            <section class="max-w-xl space-y-12">
-                {@render children?.()}
-            </section>
-        </div>
+        <main class="min-w-0 space-y-5">
+            {@render children?.()}
+        </main>
     </div>
 </div>

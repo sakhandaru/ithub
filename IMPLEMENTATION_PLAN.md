@@ -1,10 +1,30 @@
-# sitop Implementation Plan
+# ithub Implementation Plan
 
 ## 1. Tujuan dokumen
 
 Dokumen ini membagi implementasi `PRD.md` menjadi fase yang dapat dikerjakan, diuji, dan diterima secara bertahap. `DESIGN.md` tetap menjadi acuan visual dan interaksi. `AGENTS.md` tetap menjadi acuan cara kerja teknis.
 
 Rencana dimulai dari baseline aplikasi pada 10% sampai seluruh scope MVP Core dan MVP Follow-up di PRD selesai.
+
+## Keputusan arsitektur terbaru
+
+Workspace dikeluarkan dari MVP. Unit menjadi scope organisasi utama yang dapat dibuat dan dikelola sendiri. Project berada di bawah Unit, dan Task berada di bawah Project. Workspace yang masih ada di beberapa tabel dan route lama diperlakukan sebagai kompatibilitas internal selama migrasi bertahap; Workspace tidak boleh muncul dalam UI atau menjadi konsep onboarding baru.
+
+Urutan rombak:
+
+1. Onboarding Unit pertama dan active Unit.
+2. Login role Admin/User/Auditor dan membership Unit.
+
+### Role login dan administrasi global
+
+- `Admin` mengelola User, Unit, membership, permission, konfigurasi, dan Audit Log.
+- `User` bekerja berdasarkan membership Unit dan role Project.
+- `Auditor` bersifat read-only dan membaca data sesuai scope audit.
+- Pengaturan global dipisahkan menjadi Manajemen User, Manajemen Unit, Role & Akses, Audit Log, dan Pengaturan Sistem.
+- Pengaturan Unit hanya mengatur Unit aktif; tidak digunakan untuk membuat atau mengelola seluruh Unit.
+3. Dashboard, Project list, dan navigasi berbasis Unit.
+4. Project/Task route serta query scope berbasis Unit.
+5. Penghapusan bertahap referensi Workspace dari UI, dokumentasi, dan API publik.
 
 Angka 100% dalam dokumen ini berarti:
 
@@ -24,7 +44,7 @@ Yang sudah tersedia:
 
 - seluruh MVP Core sesuai Fase 0–7;
 - Sub-task, relasi antar-Task, dan milestone;
-- Dashboard Workspace berbasis data;
+- Dashboard Unit berbasis data;
 - Global Search, filter lanjutan, dan notifikasi in-app;
 - responsive layout, empty/error/unauthorized/archived state utama;
 - authorization backend, Activity Log, Audit Log, dan test permission;

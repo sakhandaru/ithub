@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { Link, page, router } from '@inertiajs/svelte';
-    import Search from '@lucide/svelte/icons/search';
-    import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
-    import Bell from '@lucide/svelte/icons/bell';
-    import FolderKanban from '@lucide/svelte/icons/folder-kanban';
+    import Search from 'carbon-icons-svelte/lib/Search.svelte';
+    import LayoutDashboard from 'carbon-icons-svelte/lib/Dashboard.svelte';
+    import Bell from 'carbon-icons-svelte/lib/Notification.svelte';
+    import FolderKanban from 'carbon-icons-svelte/lib/FolderTree.svelte';
     import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
     import { Input } from '@/components/ui/input';
     import { dashboard, search } from '@/routes';
@@ -14,7 +14,7 @@
 
     let open = $state(false);
     let query = $state('');
-    const workspace = $derived(page.props.workspaceContext?.active);
+    const unit = $derived(page.props.unitContext?.active);
 
     onMount(() => {
         const handleShortcut = (event: KeyboardEvent): void => {
@@ -46,7 +46,7 @@
         </form>
         <div class="mt-4 grid gap-2">
             <Link href={toUrl(dashboard())} onclick={() => { open = false; }} class="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"><LayoutDashboard class="size-4" aria-hidden="true" />Dashboard</Link>
-            {#if workspace}<Link href={toUrl(projectsIndex({ workspace: workspace.id }))} onclick={() => { open = false; }} class="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"><FolderKanban class="size-4" aria-hidden="true" />Semua Project</Link>{/if}
+            {#if unit}<Link href={toUrl(projectsIndex({ workspace: unit.workspace_id }))} onclick={() => { open = false; }} class="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"><FolderKanban class="size-4" aria-hidden="true" />Semua Project Unit</Link>{/if}
             <Link href={toUrl(notificationsIndex())} onclick={() => { open = false; }} class="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"><Bell class="size-4" aria-hidden="true" />Notifikasi</Link>
         </div>
     </DialogContent>

@@ -1,266 +1,442 @@
-# sitop — Design
+# ithub Design
 
-## 1. Tujuan dokumen
+## 1. Tujuan dan arah
 
-Dokumen ini menerjemahkan PRD sitop menjadi arahan desain produk dan antarmuka. Isinya mencakup struktur navigasi, hierarki layout, layar MVP, pola komponen, interaksi, responsif, aksesibilitas, dan keadaan UI.
+Dokumen ini menjadi sumber keputusan untuk visual, layout, interaction, responsive behavior, accessibility, dan frontend component architecture ithub.
 
-Dokumen ini bukan spesifikasi implementasi frontend. Detail teknis tetap mengikuti PRD dan konvensi project.
+PRD.md mengatur scope dan aturan produk. Dokumen ini mengatur cara user melihat dan menggunakan fitur. Detail teknis backend tetap mengikuti konvensi Laravel project.
 
-## 2. Arah desain
+### Arah produk
 
-sitop menggunakan pola produk yang **Plane-like**: workspace sebagai rumah kerja, Project sebagai konteks utama, Task sebagai unit kerja, sidebar kontekstual, toolbar kerja yang ringkas, serta layout List dan Board yang menampilkan data yang sama.
+ithub menggunakan pola Unit dan Project management yang terinspirasi Plane:
 
-sitop tidak menyalin branding atau identitas Plane. Yang diadopsi adalah pola informasi dan interaksinya, lalu disesuaikan dengan istilah, Unit, workflow, bukti, Activity Log, dan Audit Log sitop.
+- Unit menjadi ruang organisasi utama.
+- Project menjadi konteks utama kumpulan Task.
+- Task menjadi unit pekerjaan.
+- List, Board, Calendar, dan Gantt menampilkan data Task yang sama.
+- Activity Log dan Audit Log menjaga keterlacakan.
+- Bukti dan catatan penyelesaian mendukung status Done.
 
-Antarmuka perlu membantu user memahami tiga hal dengan cepat:
-
-1. sedang berada di Workspace, Unit, atau Project mana;
-2. pekerjaan apa yang perlu diperhatikan;
-3. tindakan apa yang dapat dilakukan user.
+ithub tidak menyalin branding Plane. Yang diadopsi hanya pola informasi dan interaksi yang cocok untuk pekerjaan TI internal.
 
 ### Prinsip visual
 
-- Prioritaskan kejelasan informasi daripada dekorasi.
-- Gunakan kepadatan informasi yang nyaman untuk pekerjaan operasional harian.
-- Status, priority, dan kondisi risiko harus mudah dipindai.
-- Gunakan warna sebagai pendukung, bukan satu-satunya penanda makna.
-- Tampilkan konteks sebelum tindakan.
-- Sediakan feedback langsung setelah tindakan berhasil atau gagal.
-- Gunakan bahasa antarmuka Indonesia dengan istilah produk yang sudah distandarkan.
-- Jangan menampilkan fitur yang belum aktif sebagai tombol palsu.
+- Informasi kerja lebih penting daripada dekorasi.
+- Kepadatan data harus nyaman untuk pekerjaan harian.
+- Status, priority, deadline, PIC, dan risiko harus mudah dipindai.
+- Konteks tampil sebelum tindakan.
+- Warna mendukung makna, bukan menjadi satu-satunya penanda.
+- Aksi utama terlihat. Aksi sekunder dan destruktif berada dalam menu atau dialog.
+- Bahasa UI menggunakan bahasa Indonesia dan terminologi standar.
+- Fitur yang belum aktif tidak tampil sebagai menu atau tombol palsu.
 
-### Pola Plane yang diadopsi
+### Token visual dasar
 
-- Workspace switcher di bagian atas sidebar konteks.
-- Search global yang dapat dibuka dari top bar atau shortcut.
-- Daftar Project yang dikelompokkan berdasarkan Unit.
-- Project Overview sebagai pintu masuk Project.
-- Toolbar layout untuk berpindah antara List dan Board.
-- Task ID yang terlihat jelas dan dapat disalin.
-- Detail Task dengan meta row untuk status, priority, PIC, dan deadline.
-- Sidebar properties untuk metadata Task yang lebih jarang diubah.
-- Activity Log sebagai timeline kolaborasi.
-- Archive sebagai cara utama mengurangi data aktif tanpa menghilangkan histori.
+- Surface memakai neutral cool yang ringan pada mode terang dan charcoal blue pada mode gelap.
+- Primary action memakai accent indigo sebagai identitas kerja, bukan sebagai dekorasi di seluruh halaman.
+- Border harus halus dan membantu grouping. Jangan memberi border pada setiap elemen kecil jika hierarchy sudah cukup jelas.
+- Radius default memakai bentuk compact. Container utama memakai radius sedang, sedangkan control kecil memakai radius lebih kecil.
+- Shadow dipakai untuk elevation yang nyata seperti popover, dialog, dan sheet. Card biasa mengandalkan surface dan border.
+- Typography memakai Instrument Sans dengan ukuran body yang nyaman dan label yang rapat untuk data operasional.
+- Focus ring menggunakan warna accent yang terlihat pada mode terang dan gelap.
 
-## 3. Terminologi antarmuka
+## 2. Terminologi
 
-Gunakan istilah berikut secara konsisten:
-
-| Gunakan | Jangan gunakan sebagai istilah UI utama |
+| Gunakan | Definisi |
 | --- | --- |
-| Task | Work item, Issue |
-| PIC | Assignee |
-| Pemohon | Requester |
-| Project Lead | Project Owner |
-| Project Admin | Owner bila maksudnya permission |
-| Activity Log | Aktivitas bila berdiri sebagai nama fitur |
-| Audit Log | Audit event |
-| Bukti | Evidence |
-| Catatan penyelesaian | Completion note |
-| Sub-task | Sub-work item |
+| Unit | Ruang organisasi yang dapat dibuat dan dikelola sendiri |
+| Project | Wadah dan konteks kumpulan Task |
+| Task | Satu pekerjaan individual |
+| Project Lead | Penanggung jawab pelaksanaan Project |
+| Project Admin | Pengelola permission dan konfigurasi Project |
+| PIC Task | Orang yang mengerjakan atau bertanggung jawab atas Task |
+| Pemohon | Orang yang mengajukan Task |
+| Activity Log | Riwayat aktivitas pada Project atau Task |
+| Audit Log | Catatan perubahan penting untuk pelacakan |
+| Admin | Role login untuk pengelolaan sistem, User, Unit, dan membership |
+| User | Akun operasional dengan akses berdasarkan membership |
+| Auditor | Role login read-only untuk pemeriksaan dan bukti audit |
+| Bukti | Catatan, attachment, atau URL pendukung penyelesaian |
+| Catatan penyelesaian | Penjelasan hasil Task sebelum Done |
+| Sub-task | Task anak dari Task lain |
 
-Istilah teknis seperti `work_items`, `assignee`, atau `audit_events` boleh digunakan dalam kode, tetapi tidak pada antarmuka user.
+Istilah teknis seperti assignee, work_items, dan audit_events hanya dipakai dalam kode, bukan sebagai istilah UI.
 
-## 4. Arsitektur navigasi
+## 3. Shell dan navigasi
 
-sitop memakai **navigasi dua tingkat**.
+ithub menggunakan navigasi dua tingkat.
 
-### 4.1 Bilah tingkat pertama
+    Application Shell
+    ├── Primary Rail
+    ├── Context Sidebar
+    └── Main Content
 
-Bilah tetap di sisi paling kiri pada desktop. Fungsinya hanya berpindah antar-area bisnis.
+### Primary Rail
 
-```text
-[Logo sitop]
+Primary Rail berada paling kiri pada desktop dan hanya berpindah area bisnis.
 
-Pekerjaan
-Pengetahuan
-Operasional
-Kepatuhan
-Laporan
+    [Logo ithub]
 
-Pengaturan
-```
+    Pekerjaan
+    Pengetahuan
+    Operasional
+    Kepatuhan
+    Laporan
+
+    Pengaturan
 
 Aturan:
 
-- lebar tetap dan lebih sempit daripada bilah konteks;
-- item aktif memiliki indikator bentuk dan warna;
-- ikon selalu disertai label pada ukuran desktop utama;
-- item yang belum aktif tidak ditampilkan sebagai navigasi yang dapat diklik;
-- `Pengaturan` berada terpisah secara visual dari area bisnis.
+- area aktif memiliki indikator bentuk dan label, bukan warna saja;
+- Pengaturan terpisah dari area bisnis;
+- fitur yang belum aktif tidak menjadi link;
+- pada mobile, Primary Rail menjadi menu geser atau menu area.
 
-### 4.2 Bilah tingkat kedua
+### Context Sidebar
 
-Bilah konteks berada di sebelah bilah tingkat pertama. Isinya mengikuti area dan objek aktif.
+Context Sidebar menampilkan konteks yang sedang dipakai:
 
-Bagian umum:
+    Logo dan nama ithub
+    Unit switcher
+    Global Search
+    Notifikasi
+    Menu area aktif
+    Unit atau Project terkait
+    Pengaturan Unit
+    Administrasi (Admin)
+    Profil dan keluar
 
-```text
-Logo dan nama sitop
-Pemilih Workspace
-Global Search
-Notifikasi
-Menu area aktif
-Project atau objek terkait
-Pengaturan Workspace
-Profil dan keluar
-```
+#### Shell Pekerjaan
 
-### 4.3 Konteks Project
+Sidebar Pekerjaan mengikuti pola Plane yang disesuaikan dengan istilah ithub. Shell ini selalu menyediakan peta navigasi lengkap, sementara fitur yang belum tersedia tampil non-interaktif dengan penanda `Segera hadir`.
 
-Saat user berada di dalam Project, bilah konteks menampilkan:
+    Pekerjaan
+    ├── Task baru
+    ├── Beranda
+    └── Tugas saya
 
-```text
-Project
-├── Ikhtisar
-├── Daftar Task
-├── Papan
-├── Milestone
-├── Activity Log
-└── Pengaturan Project
-```
+    Unit
+    ├── Projects
+    ├── Aktivitas
+    ├── Dasbor
+    ├── Analitik
+    ├── Arsip
+    └── Pengaturan Unit
 
-Fitur yang belum aktif tidak perlu ditampilkan. Jika fitur dibuat tersedia kemudian, item ditambahkan tanpa mengubah pola navigasi utama.
+    Projects
+    └── [Project aktif]
+        ├── Task
+        ├── Views
+        ├── Pages
+        ├── Cycles
+        ├── Modules
+        ├── Intake
+        ├── Releases
+        ├── Milestone
+        ├── Pembaruan Project
+        ├── Activity Log
+        └── Pengaturan Project
 
-### 4.4 Struktur Plane-like sitop
+Aturan shell:
 
-```text
-Primary Rail
-└── Area bisnis sitop
+- daftar Project berasal dari Project yang dapat dilihat user pada Unit aktif;
+- Project aktif membuka submenu pada item Project yang sama;
+- Task adalah istilah ithub untuk work item;
+- item `Segera hadir` bukan link, tidak dapat difokuskan sebagai aksi, dan tidak menjanjikan fitur yang belum ada;
+- item aktif tetap memiliki label, bentuk, dan indikator kontras, bukan warna saja;
+- sidebar tetap dapat discroll pada mobile tanpa memotong label atau status.
 
-Context Sidebar
-├── Workspace switcher
-├── Search
-├── Pekerjaan saya
-├── Semua Project
-│   ├── Development
-│   ├── Infra
-│   └── Operasional
-├── Saved views (jika aktif)
-└── Workspace settings
+Saat Admin membuka Administrasi, Context Sidebar menampilkan:
 
-Project Context
-├── Ikhtisar
-├── Task
-│   ├── List
-│   └── Board
-├── Milestone (jika aktif)
-├── Activity Log
-└── Project settings
-```
+    Manajemen User
+    Manajemen Unit
+    Role & Akses
+    Audit Log
+    Pengaturan Sistem
 
-Pola ini mengikuti cara Plane menempatkan Workspace, Project, Work items, Your work, dan layout kerja dalam satu shell. Plane memisahkan konteks Workspace dari resource Project, lalu menyediakan layout List, Board, Calendar, Table, dan Timeline sesuai fitur yang aktif. Untuk MVP sitop, hanya List dan Board yang aktif terlebih dahulu. ([Plane Workspace](https://docs.plane.so/workspaces/overview), [Plane Organize and View Work](https://docs.plane.so/introduction/tutorials/organize-and-view-work))
+Saat berada di Project:
 
-### 4.5 Konteks Unit
+    Project
+    ├── Ikhtisar
+    ├── Daftar Task
+    ├── Papan
+    ├── Calendar
+    ├── Gantt
+    ├── Milestone
+    ├── Activity Log
+    └── Pengaturan Project
 
-Saat user melihat Unit, tampilkan:
+Menu yang tersedia dapat menampilkan peta fitur masa depan, tetapi hanya fitur aktif yang menjadi link. Fitur yang belum tersedia harus tampil sebagai `Segera hadir` tanpa aksi palsu.
 
-```text
-Unit
-├── Ikhtisar
-├── Project
-├── Task
-└── Activity Log
-```
+Menu Project dikelompokkan agar user dapat membedakan konteks, pekerjaan harian, insight, dan konfigurasi:
 
-Unit tidak memiliki role permission khusus pada MVP. Karena itu, jangan membuat menu administrasi Unit yang seolah-olah sudah aktif.
+- Project: Ikhtisar;
+- Ruang kerja: Task, Board, Calendar, dan Gantt;
+- Insight: Dashboard, Milestone, dan Activity Log;
+- Pengaturan: Pengaturan Project.
 
-## 5. Responsif
+Pada mobile, grouping berubah menjadi satu baris navigasi horizontal yang dapat di-scroll. Active state tetap memakai label, bentuk, dan accent color.
+
+### Konteks aktif
+
+Setiap halaman harus membuat user dapat menjawab:
+
+1. Saya berada di Unit atau Project mana?
+2. Data apa yang sedang saya lihat?
+3. Aksi apa yang dapat saya lakukan?
+4. Apa dampak aksi tersebut?
+
+## 4. Responsive behavior
 
 ### Desktop
 
-- Dua bilah navigasi terlihat berdampingan.
-- Bilah tingkat pertama tetap terlihat.
-- Bilah tingkat kedua dapat diciutkan jika ruang konten sempit.
-- Konten utama memakai layout satu kolom untuk detail dan layout dua kolom untuk dashboard atau halaman overview.
+- Primary Rail dan Context Sidebar tampil berdampingan.
+- Main Content memiliki lebar yang cukup untuk table atau board.
+- Detail Task dapat memakai layout dua kolom.
+- Sidebar konteks dapat diciutkan jika ruang content terbatas.
 
 ### Tablet
 
-- Bilah tingkat pertama dapat berubah menjadi rail dengan ikon dan tooltip.
-- Bilah tingkat kedua tetap dapat dibuka atau diciutkan.
-- Table dan board menyediakan horizontal scrolling yang terkontrol.
+- Primary Rail dapat berubah menjadi rail icon dengan tooltip.
+- Context Sidebar dapat dibuka dan diciutkan.
+- Table, board, Calendar, dan Gantt memakai overflow terkontrol.
+- Toolbar boleh membungkus ke baris kedua.
 
 ### Mobile
 
-- Bilah tingkat pertama menjadi menu geser atau bottom navigation untuk area utama.
-- Bilah tingkat kedua menjadi drawer konteks.
-- Project aktif, Workspace, dan Search tetap mudah ditemukan.
-- Filter dan sort dibuka melalui sheet.
-- Detail Task menggunakan satu kolom.
-- Aksi utama tetap terlihat, sedangkan aksi sekunder berada dalam menu.
-- Item aktif harus dapat dikenali melalui label, bentuk, dan indikator; tidak hanya warna.
+- Context Sidebar menjadi drawer.
+- Filter dan sort dibuka melalui Sheet.
+- Detail Task menjadi satu kolom.
+- Aksi utama tetap terlihat, aksi sekunder berada di menu.
+- Board memakai horizontal scroll per kolom atau pemilih kolom.
+- Table menyembunyikan kolom sekunder secara progresif.
+- Tidak ada content penting yang tertutup fixed navigation.
+- Target sentuh minimal 44 x 44 px.
+- Active state tetap terlihat melalui label, bentuk, atau indikator.
 
-## 6. Hierarki layout umum
+## 5. Layout dan visual hierarchy
 
-```text
-Application Shell
-├── Primary Navigation
-├── Context Navigation
-└── Main Content
-    ├── Page Header
-    ├── Context Controls
-    └── Content Area
-```
+Pola umum halaman:
 
-### Page Header
+    Page
+    ├── Breadcrumb atau context label
+    ├── Page header
+    │   ├── Title
+    │   ├── Description atau metadata
+    │   └── Primary and secondary actions
+    ├── Context toolbar
+    │   ├── Search
+    │   ├── Filter
+    │   ├── Sort
+    │   ├── Group
+    │   ├── Layout switcher
+    │   └── Saved View
+    └── Content area
 
-Page Header berisi:
+### Page header
 
-- breadcrumb atau konteks lokasi;
-- judul halaman;
-- deskripsi singkat bila diperlukan;
-- status atau metadata utama;
-- primary action;
-- secondary actions dalam menu.
+- Title menjelaskan objek yang sedang dilihat.
+- Primary action memakai kata kerja spesifik, seperti Tambah Task.
+- Aksi destruktif tidak diletakkan sebagai primary action.
+- Jangan memenuhi header dengan tombol yang jarang digunakan.
 
-Jangan meletakkan terlalu banyak tombol sejajar di header. Tindakan utama harus terlihat, sedangkan tindakan destruktif atau jarang digunakan berada di menu.
+### Context toolbar
 
-### Context Controls
+Control harus menjelaskan scope, misalnya Filter Task Project ini, bukan hanya Filter.
 
-Context Controls digunakan untuk:
+Toolbar harus menangani:
 
-- search;
-- filter;
-- sort;
-- group;
-- layout switcher;
-- saved view jika sudah aktif.
+- loading atau processing;
+- filter aktif sebagai chip;
+- reset filter;
+- empty result;
+- error request;
+- permission untuk setiap action.
 
-Control harus menjelaskan scope-nya, misalnya `Filter Task Project ini`, bukan hanya `Filter`.
+## 6. Component system
 
-## 7. Layar MVP Core
+Frontend menggunakan component-based architecture.
 
-### 7.1 Dashboard Workspace
+    Bits UI primitives
+        ↓
+    components/ui design system lokal
+        ↓
+    Komponen domain
+        ↓
+    Page composition
 
-Tujuan: menjawab apa yang perlu diperhatikan lintas Project.
+### Primitive behavior
 
-Struktur:
+Bits UI menjadi standar untuk behavior primitive:
 
-```text
-Header: Dashboard Workspace
-├── Ringkasan Task aktif
-├── Task saya
-├── Task terlambat
-├── Task terblokir
-├── Project perlu perhatian
-├── Beban kerja per PIC
-└── Activity Log terbaru
-```
+- Dialog;
+- Dropdown Menu;
+- Select;
+- Checkbox;
+- Collapsible;
+- Sheet;
+- Tooltip;
+- primitive Bits UI lain yang diperlukan.
 
-Kartu ringkasan harus dapat diklik untuk membuka daftar yang sudah terfilter.
+Bits UI menangani behavior, focus management, keyboard navigation, portal, dan accessibility. Styling tetap berasal dari token visual dan Tailwind ithub.
 
-### 7.2 Daftar Project
+Halaman tidak mengimpor primitive Bits UI langsung jika wrapper lokal sudah tersedia.
 
-Menampilkan:
+### Komponen lokal
 
-- nama Project;
-- Project ID;
-- Unit utama;
-- Project Lead;
-- status Project;
-- progress Task;
-- target selesai;
-- visibility.
+Komponen pada resources/js/components/ui menjadi API visual resmi ithub.
+
+Aturan:
+
+- API props harus bertipe dan memiliki nama yang jelas;
+- state bindable harus eksplisit;
+- variasi visual memakai props atau data attributes;
+- composition memakai snippets Svelte 5;
+- komponen tidak bergantung pada page tertentu;
+- komponen satu kali pakai tidak dibuat sebagai abstraction;
+- state loading, disabled, error, dan empty hanya ditambahkan jika relevan;
+- komponen interaktif harus memiliki behavior nyata.
+
+### Komponen domain
+
+Komponen domain memahami istilah dan data ithub, contohnya:
+
+- TaskTable;
+- TaskCard;
+- ProjectHeader;
+- ActivityTimeline;
+- AuditLogTable;
+- StatusBadge;
+- AssigneePicker;
+- SavedViewPicker.
+
+Komponen domain boleh menerima data dan callback dari page, tetapi tidak boleh menggantikan authorization atau aturan workflow backend.
+
+### Page composition
+
+Page pada resources/js/pages bertanggung jawab untuk:
+
+- menerima props Inertia;
+- menyusun layout;
+- menghubungkan component contract;
+- memanggil route melalui Wayfinder;
+- menampilkan state halaman;
+- meneruskan aksi ke backend.
+
+Page tidak mengulang markup komponen yang sudah ada.
+
+## 7. State, data, dan form
+
+Bedakan tiga jenis state:
+
+| Jenis | Contoh | Sumber |
+| --- | --- | --- |
+| Server state | Project, Task, membership, Activity Log | Props Inertia dan response backend |
+| URL state | Search, filter, sort, grouping, layout | Query parameter atau Saved View |
+| UI state | Dialog, Sheet, selected row, expanded section, drag preview | State lokal komponen |
+
+Aturan:
+
+- backend menjadi sumber kebenaran untuk permission, workflow, validasi, audit, dan persistence;
+- jangan menyalin server state ke store lokal tanpa kebutuhan yang jelas;
+- mutation yang optimistis wajib memiliki rollback;
+- state final setelah mutation mengikuti response atau reload props;
+- loading dan processing berasal dari request nyata;
+- request gagal tidak menghapus input yang masih dapat dipertahankan;
+- filter dan sort harus dapat dipulihkan melalui URL atau Saved View.
+
+### Route dan form
+
+- Semua route frontend ke Laravel menggunakan Wayfinder.
+- Form menggunakan Inertia Form atau pola form yang sudah ada.
+- Error backend ditampilkan dekat field atau objek yang bermasalah.
+- Setiap mutation memiliki feedback success, validation error, unauthorized, network error, dan rollback bila relevan.
+- Permission tetap diperiksa di backend walaupun action disembunyikan di frontend.
+
+## 8. Standar library frontend
+
+| Kebutuhan | Standar | Tanggung jawab |
+| --- | --- | --- |
+| UI primitive | Bits UI melalui wrapper lokal | Behavior, focus, keyboard, portal, accessibility |
+| Styling | Tailwind dan token visual lokal | Color, spacing, typography, density, radius, state |
+| Board drag-and-drop | @dnd-kit/svelte | Sensor, sortable item, drop target, preview optimistis |
+| Data table | @tanstack/svelte-table | Column definition, row model, sorting, filtering, selection |
+| Calendar | fullcalendar | Render event dan view Calendar |
+| Project timeline | frappe-gantt | Render timeline dan view mode |
+| Ikon | Lucide Svelte | Ikon fungsional dan accessible label |
+| Toast | Sonner atau pola feedback lokal | Konfirmasi singkat dan status request |
+
+Tidak ada library yang menjadi sumber aturan bisnis. Laravel tetap mengatur permission, workflow, validasi, audit, dan persistence.
+
+### DND Kit
+
+Board memakai DragDropProvider dan komponen sortable yang stabil.
+
+- Kolom kosong tetap menjadi drop target.
+- Drag hanya memberi preview dan optimistic state.
+- Perubahan status dikirim melalui endpoint workflow backend.
+- Jika backend menolak, kartu kembali ke posisi semula.
+- Select status atau menu action menjadi alternatif keyboard dan mobile.
+- Status Blocked, Canceled, Reopen, dan Done tetap mengikuti form alasan atau bukti.
+
+### TanStack Table
+
+Semua data table memakai @tanstack/svelte-table melalui shell table bersama.
+
+- Definisi kolom tetap berada di komponen domain atau page yang memiliki kebutuhan data.
+- Rendering cell memakai komponen UI lokal.
+- Sorting, filtering, pagination, dan selection mengikuti source of truth backend bila data berada di URL atau endpoint.
+- Permission action dihitung dari data dan authorization, bukan dari table.
+- Mobile memakai kolom inti atau layout alternatif yang tetap memakai data table yang sama.
+- Fitur table diaktifkan sesuai kebutuhan agar bundle tetap ringan.
+
+### FullCalendar
+
+Calendar dibuat melalui lifecycle Svelte.
+
+- Instance dibuat saat page aktif dan dihancurkan saat unmount.
+- Event berasal dari Task yang memiliki deadline.
+- View awal bulan, dengan alternatif minggu dan list.
+- Klik event membuka detail Task melalui Inertia.
+- Task tanpa deadline tidak dibuat sebagai event palsu.
+- Calendar read-only sampai mutation deadline memiliki endpoint, authorization, audit, dan failure feedback.
+- Styling library mengikuti token visual ithub.
+
+### Frappe Gantt
+
+Gantt dibuat melalui lifecycle Svelte.
+
+- Timeline menampilkan Task yang memiliki deadline dan milestone yang memiliki target.
+- Task memakai tanggal dibuat sebagai start sementara selama model belum memiliki start_date.
+- View awal Week, dengan pilihan Day, Month, dan Year.
+- Klik bar Task membuka detail Task.
+- Milestone memiliki visual berbeda dan tidak membuka detail Task.
+- Timeline read-only sampai drag, resize, progress, dan dependency memiliki model data serta endpoint backend.
+- Styling library mengikuti token visual ithub.
+
+## 9. Spesifikasi layar
+
+### Beranda
+
+Menjawab kondisi lintas semua Unit yang diikuti user. Beranda menampilkan Task saya, Task terlambat, Task terblokir, Project yang perlu perhatian, dan perubahan terbaru tanpa mengubah Unit aktif.
+
+### Dashboard Unit
+
+Menjawab kondisi lintas Project pada Unit aktif:
+
+- Task saya;
+- Task terlambat;
+- Task terblokir;
+- Project yang perlu perhatian;
+- progress per Project;
+- beban kerja per PIC;
+- perubahan terbaru.
+
+Ringkasan yang dapat ditindaklanjuti harus membuka daftar Task atau Project dengan filter yang sesuai.
+
+### Daftar Project
+
+Menampilkan nama, Project ID, Unit, Project Lead, status, progress, target, dan visibility.
 
 Filter minimum:
 
@@ -269,24 +445,13 @@ Filter minimum:
 - Project Lead;
 - visibility.
 
-### 7.3 Ikhtisar Project
+### Ikhtisar Project
 
-Menampilkan:
+Menampilkan tujuan, Project ID, Unit, Project Lead, Project Admin, status, progress Task, risiko, milestone, anggota, Task penting, dan Activity Log terbaru.
 
-- nama dan Project ID;
-- tujuan atau deskripsi;
-- Unit;
-- Project Lead dan Project Admin;
-- status Project;
-- progress Task;
-- Task terlambat dan terblokir;
-- milestone jika aktif;
-- Activity Log terbaru;
-- anggota Project.
+### Daftar Task
 
-### 7.4 Daftar Task
-
-Kolom atau informasi minimum:
+Informasi inti:
 
 - Task ID;
 - Title;
@@ -296,656 +461,207 @@ Kolom atau informasi minimum:
 - priority;
 - deadline;
 - label;
-- indikator bukti atau catatan penyelesaian;
-- indikator Sub-task bila ada.
+- bukti atau catatan penyelesaian;
+- indikator Sub-task.
 
 Interaksi:
 
+- quick add dengan Title sebagai input wajib;
 - inline update untuk field yang diizinkan;
-- multi-select untuk aksi bulk bila tersedia;
-- filter dan sort;
-- layout switcher `List` dan `Board` berada di toolbar yang sama;
-- quick add membuat Task dari Title saja;
-- buka detail Task tanpa kehilangan konteks daftar.
+- filter, sort, group;
+- bulk action jika permission dan endpoint tersedia;
+- layout switcher List, Board, Calendar, dan Gantt;
+- detail dibuka tanpa kehilangan konteks daftar.
 
-### 7.5 Papan
+### Board
 
-Papan mengelompokkan Task berdasarkan status.
+- Kolom mengikuti status workflow.
+- Kartu menampilkan Task ID, Title, priority, PIC, deadline, dan label.
+- Kolom kosong tetap dapat menerima kartu.
+- Drag memiliki feedback saat valid, invalid, processing, success, dan failure.
+- Perubahan status melalui keyboard tersedia tanpa drag.
+- Project archived bersifat read-only.
 
-```text
-Backlog | Todo | In Progress | In Review | Done
-```
+### Calendar
 
-Aturan:
+- Event menampilkan Task ID, Title, status, dan deadline.
+- Event click membuka detail Task.
+- Task tanpa deadline ditampilkan melalui informasi terpisah.
+- View dan filter tetap mengikuti Project aktif.
 
-- perpindahan kartu menjalankan aturan backend;
-- perpindahan ke `Blocked`, `Canceled`, `Reopen`, atau `Done` membuka form alasan/bukti yang relevan;
-- jika backend menolak perubahan, kartu kembali ke posisi semula dan menampilkan feedback;
-- keyboard dan non-drag alternative harus tersedia untuk mengubah status.
+### Gantt
 
-### 7.6 Detail Task
+- Bar Task menampilkan rentang waktu yang tersedia.
+- Milestone ditampilkan sebagai penanda target.
+- Timeline menjelaskan jika tanggal mulai masih memakai tanggal dibuat.
+- Data kosong menjelaskan cara menambahkan deadline atau target.
 
-Struktur yang disarankan:
+### Detail Task
 
-```text
-Task Header
-├── Task ID dan Title
-├── Status
-├── Priority
-├── PIC
-├── Deadline
-└── More actions
+    Task header
+    ├── Task ID dan Title
+    ├── Status
+    ├── Priority
+    ├── PIC
+    ├── Deadline
+    └── More actions
 
-Task Body
-├── Description
-├── Catatan penyelesaian
-├── Bukti dan Attachment
-├── Sub-task
-├── Relasi
-├── Komentar
-└── Activity Log
+    Task body
+    ├── Description
+    ├── Catatan penyelesaian
+    ├── Bukti dan attachment
+    ├── Sub-task
+    ├── Relasi
+    ├── Komentar
+    └── Activity Log
 
-Task Sidebar
-├── Project
-├── Pemohon
-├── Label
-├── Milestone
-├── Created by
-└── Created/updated date
-```
+    Task properties
+    ├── Project
+    ├── Pemohon
+    ├── Label
+    ├── Milestone
+    ├── Creator
+    └── Created and updated date
 
-Audit Log ditampilkan kepada role yang berwenang, melalui tab atau panel terpisah dari Activity Log.
+Audit Log berada terpisah dari Activity Log dan hanya terlihat sesuai permission.
 
-Detail Task mengikuti pola Plane-like:
+### Pengaturan Project
 
-- Task ID berada di atas Title dan dapat disalin;
-- meta row menampilkan status, priority, PIC, start date, dan deadline;
-- description menjadi area utama untuk konteks pekerjaan;
-- toolbar di bawah description menyediakan Sub-task, relasi, dependency, attachment, dan link;
-- properties yang jarang diubah berada di sidebar yang dapat diciutkan;
-- detail dapat dibuka sebagai halaman penuh atau panel dari List/Board tanpa kehilangan konteks.
+Bagian yang aktif:
 
-### 7.7 Pengaturan Project
-
-Bagian minimum:
-
-- General: nama, Project ID, deskripsi, Unit, visibility, status, tanggal;
-- Members: anggota dan Project role;
-- Workflow: status standar dan default status;
+- General;
+- Members dan Project role;
+- Workflow;
 - Labels;
 - Default Assignee;
-- Archive.
+- Milestone;
+- Archive dan restore.
 
-Menu fitur lanjutan hanya tampil ketika fitur tersebut sudah aktif.
+Fitur lanjutan tidak boleh muncul sebelum tersedia.
 
-Pengaturan Project mengikuti pola feature toggle per Project: fitur seperti Milestone, Cycle, Module, Page, View, atau Project Update hanya menambahkan menu ketika diaktifkan. Untuk MVP, menu yang tampil hanya fitur yang benar-benar tersedia.
+## 10. Interaction dan visual states
 
-## 8. Komponen dan pola interaksi
+### Status dan priority
 
-### Status badge
+Status dan priority selalu memiliki label teks. Warna, bentuk, atau ikon menjadi pendukung.
 
-Status harus memiliki:
-
-- label teks;
-- warna pendukung;
-- bentuk atau ikon yang membedakan state penting.
-
-Jangan menggunakan warna merah/hijau sebagai satu-satunya informasi.
-
-### Priority
-
-Gunakan label teks dan indikator visual yang konsisten:
-
-```text
-Urgent | High | Medium | Low | None
-```
-
-### Avatar dan PIC
-
-- Tampilkan nama melalui tooltip atau accessible label.
-- Jika belum ada PIC, tampilkan `Belum ditugaskan`, bukan avatar kosong tanpa penjelasan.
-- Klik avatar membuka pilihan user yang memiliki role Project Admin atau Contributor.
+Jika belum ada PIC, tampilkan Belum ditugaskan. Jangan menampilkan avatar kosong tanpa penjelasan.
 
 ### Empty state
 
-Empty state harus menjelaskan:
+Empty state menjelaskan data yang kosong dan tindakan berikutnya.
 
-- apa yang kosong;
-- mengapa belum ada data jika relevan;
-- tindakan utama yang dapat dilakukan.
+    Belum ada Task di Project ini.
+    Tambahkan Task pertama untuk mulai mencatat pekerjaan.
+    [Tambah Task]
 
-Contoh:
+### Dialog dan Sheet
 
-```text
-Belum ada Task di Project ini.
-Tambahkan Task pertama untuk mulai mencatat pekerjaan.
-[Tambah Task]
-```
-
-### Confirmation
-
-Konfirmasi wajib digunakan untuk:
-
-- archive;
-- restore bila berdampak pada banyak data;
-- delete permanen;
-- perubahan yang menyebabkan hilangnya akses;
-- perubahan status yang memerlukan alasan.
-
-Dialog harus menjelaskan konsekuensi, bukan hanya bertanya “Yakin?”.
-
-### Feedback penyimpanan
-
-- Gunakan feedback dekat dengan objek yang berubah.
-- Gunakan toast untuk konfirmasi singkat.
-- Gunakan inline error untuk validasi field.
-- Jangan mengandalkan toast saja untuk error penting.
-
-## 9. Form dan validasi
-
-Form pembuatan Task mengikuti pola quick capture:
-
-- Title menjadi field utama dan wajib;
-- Project mengikuti konteks aktif;
-- field lain dapat dilengkapi kemudian;
-- tombol simpan memiliki state processing;
-- error backend ditampilkan pada field atau konteks yang tepat.
-
-Form perubahan status menampilkan field tambahan sesuai status:
-
-| Status tujuan | Input wajib |
-| --- | --- |
-| Blocked | Alasan |
-| Canceled | Alasan |
-| Reopen | Alasan |
-| Done | Catatan penyelesaian atau bukti |
-
-## 10. Activity Log dan Audit Log di UI
-
-### Activity Log
-
-Activity Log tampil kronologis, newest first, dengan:
-
-- avatar atau identitas actor;
-- deskripsi aktivitas;
-- waktu relatif dan waktu lengkap melalui tooltip;
-- link ke objek yang relevan.
-
-### Audit Log
-
-Audit Log memakai tampilan yang lebih terstruktur:
-
-```text
-Actor | Action | Object | Before | After | Timestamp
-```
-
-Nilai sebelum dan sesudah dapat dibuka dalam detail agar daftar utama tetap ringkas.
-
-## 11. Aksesibilitas
-
-- Semua aksi utama dapat diakses dengan keyboard.
-- Focus state terlihat jelas.
+- Dialog menjelaskan konsekuensi action.
 - Dialog mengembalikan focus ke trigger setelah ditutup.
-- Form memiliki label yang jelas dan error yang terhubung ke field.
-- Drag-and-drop di Board memiliki alternatif menu atau keyboard.
-- Status dan permission tidak disampaikan hanya melalui warna.
-- Kontras teks dan kontrol memenuhi standar aksesibilitas yang relevan.
-- `aria-label` digunakan untuk ikon tanpa teks.
-- Loading state memberi informasi kepada screen reader bila relevan.
+- Sheet dipakai untuk filter, navigation mobile, dan panel sekunder.
+- Escape, backdrop, dan tombol close bekerja konsisten.
+- Focus tidak boleh keluar dari dialog yang sedang terbuka.
 
-## 12. Respons dan feedback error
+### Feedback mutation
 
-### Tidak diizinkan
+- Processing state menonaktifkan action yang sama.
+- Success feedback dekat dengan objek atau melalui toast singkat.
+- Validation error berada dekat field.
+- Error permission menjelaskan batas akses tanpa membocorkan data.
+- Network error menyediakan Coba lagi.
+- Konflik data menawarkan reload atau perbandingan bila tersedia.
+- Aksi destruktif memerlukan konfirmasi.
 
-- Jangan menampilkan action yang jelas-jelas tidak boleh dilakukan.
-- Jika user mengakses URL langsung, tampilkan keadaan tidak diizinkan atau tidak ditemukan sesuai kebijakan.
-- Jelaskan bahwa akses dibatasi tanpa membocorkan data objek.
+### State checklist
 
-### Jaringan gagal
+Setiap layar menangani state yang relevan:
 
-- Pertahankan input yang belum tersimpan bila memungkinkan.
-- Tampilkan tombol `Coba lagi`.
-- Jangan menganggap perubahan berhasil sebelum backend mengonfirmasi.
+- loading;
+- empty;
+- success;
+- validation failed;
+- unauthorized;
+- network failed;
+- saved;
+- conflict;
+- archived;
+- not found.
 
-### Konflik data
+## 11. Accessibility
 
-- Beri tahu user bahwa data berubah di tempat lain.
-- Tawarkan reload atau perbandingan bila tersedia.
-- Jangan diam-diam menimpa perubahan user.
+- Semua action utama dapat dijangkau keyboard.
+- Focus state terlihat jelas.
+- Dialog dan Sheet memiliki focus management.
+- Form memiliki label dan error association.
+- Ikon tanpa teks memiliki accessible label.
+- Status dan permission tidak hanya dibedakan dengan warna.
+- Drag-and-drop memiliki alternatif keyboard atau menu.
+- Target sentuh minimal 44 x 44 px.
+- Loading dan processing diumumkan kepada screen reader bila relevan.
+- Kontras text dan control memenuhi standar aksesibilitas yang dipakai project.
 
-## 13. Responsif dan kepadatan data
+## 12. Performance dan maintainability
 
-- List tetap dapat dipindai pada layar kecil dengan menyembunyikan kolom sekunder secara progresif.
-- Informasi inti yang dipertahankan pada mobile: Task ID, Title, status, PIC, dan deadline.
-- Filter kompleks dibuka dalam sheet.
-- Detail Task tidak boleh memerlukan horizontal scrolling.
-- Board mobile boleh menggunakan horizontal scrolling per kolom, tetapi kartu tetap memiliki target sentuh yang nyaman.
+- Page memakai code splitting yang tersedia melalui Inertia dan Vite.
+- Instance library dibuat hanya saat page aktif dan selalu dibersihkan saat unmount.
+- Data besar memakai pagination atau filtering server-side.
+- Table, Board, Calendar, dan Gantt tidak me-render ulang seluruh page untuk perubahan satu item bila dapat dihindari.
+- Komponen domain tetap fokus pada satu tanggung jawab.
+- Abstraction baru dibuat ketika ada reuse atau behavior yang benar-benar sama.
+- Library tidak diberi fitur yang tidak dibutuhkan.
+- Query dan payload tidak membawa data di luar scope permission.
 
-## 14. Status fitur
+## 13. Definition of Done desain
 
-Fitur berikut tidak boleh tampil sebagai menu aktif sebelum tersedia:
+Layar atau komponen siap diimplementasikan jika:
 
-- Pengetahuan;
-- Operasional aset;
-- Dokumen dan kontrak;
-- Kepatuhan;
-- Integrasi besar;
-- Workflow bebas;
-- Approval bertingkat.
-
-Jika area utama sudah ditampilkan sebagai bagian dari shell, area yang belum aktif harus memiliki treatment yang jelas atau tidak ditampilkan sama sekali. Jangan menampilkan halaman kosong yang menyerupai fitur siap pakai.
-
-## 15. Definition of Done desain
-
-Desain layar atau komponen dianggap siap untuk implementasi jika:
-
-- konteks Workspace, Unit, atau Project terlihat jelas;
-- primary action dan permission action dapat dibedakan;
+- konteks Unit atau Project terlihat;
+- primary action dan permission action jelas;
 - happy path dan failure path sudah ditentukan;
-- empty, loading, validation, unauthorized, archived, dan not-found state relevan sudah memiliki rancangan;
+- state relevan sudah dirancang;
 - status tidak hanya dibedakan dengan warna;
-- desktop, tablet, dan mobile memiliki perilaku yang jelas;
-- keyboard dan focus behavior sudah dipikirkan;
-- copy memakai terminologi standar sitop;
-- fitur yang belum aktif tidak muncul sebagai tombol palsu.
+- desktop, tablet, dan mobile memiliki behavior yang jelas;
+- keyboard dan focus behavior sudah ditentukan;
+- route memakai Wayfinder;
+- komponen memakai wrapper lokal jika tersedia;
+- fitur yang belum aktif tidak muncul sebagai kontrol;
+- desain tidak menambah aturan produk yang belum ada di PRD.
 
-## 16. Referensi keputusan
+## 14. Checklist review sebelum merge
 
-- Scope dan aturan produk: `PRD.md`.
-- Konteks produk dan roadmap besar: `docs/SIM_TI_PROJECT_HANDOFF.md`.
+### Product
 
-## 17. Spesifikasi Plane-like per layar
+- Apakah behavior mengikuti PRD?
+- Apakah scope permission jelas?
+- Apakah fitur baru berada dalam MVP yang disepakati?
 
-Bagian ini menjadi acuan visual dan interaksi yang lebih konkret. Prinsipnya adalah mengikuti pola Plane, bukan menyalin identitas visualnya.
+### UI
 
-### 17.1 Application Shell
+- Apakah layout memakai hierarchy yang jelas?
+- Apakah komponen lokal digunakan kembali?
+- Apakah loading, empty, error, unauthorized, archived, dan not-found sudah diperiksa?
+- Apakah mobile tidak overflow?
 
-```text
-┌──────────────┬─────────────────────────┬──────────────────────────────┐
-│ Primary Rail │ Context Sidebar         │ Main Content                 │
-│              │                         │                              │
-│ Logo         │ Workspace switcher      │ Top bar                      │
-│ Area bisnis  │ Search                  │ Breadcrumb / context         │
-│              │ Pekerjaan saya          │ Page title                   │
-│              │ Semua Project           │ Toolbar                      │
-│ Pengaturan   │ Project aktif           │ Content                      │
-└──────────────┴─────────────────────────┴──────────────────────────────┘
-```
+### Interaction
 
-Perilaku:
+- Apakah setiap tombol memiliki behavior nyata?
+- Apakah mutation memiliki processing, success, dan failure feedback?
+- Apakah aksi drag memiliki alternatif keyboard atau menu?
+- Apakah dialog mengelola focus?
 
-- Primary Rail berpindah area bisnis tanpa mengubah sesi atau Workspace aktif.
-- Context Sidebar berubah mengikuti area aktif.
-- Main Content tidak boleh mengulang seluruh navigasi sidebar.
-- Workspace switcher menampilkan nama Workspace, avatar atau logo, dan daftar Workspace yang dapat diakses.
-- Search dapat dibuka dari top bar dan shortcut `Cmd/Ctrl + K`.
-- Notifikasi dan profil berada di top bar atau area bawah Context Sidebar.
-- Sidebar dapat diciutkan, tetapi context aktif tetap terlihat melalui breadcrumb atau header.
+### Technical
 
-### 17.2 Workspace Home / Dashboard
+- Apakah route memakai Wayfinder?
+- Apakah server state tidak disalin tanpa alasan?
+- Apakah instance FullCalendar atau Frappe Gantt dibersihkan?
+- Apakah table memakai TanStack Table?
+- Apakah Board memakai DND Kit?
+- Apakah data dan permission tetap berasal dari backend?
 
-Workspace Home adalah titik masuk setelah login. Polanya mengikuti dashboard `Your Work` Plane, tetapi metrik sitop ditambah ringkasan lintas Unit dan Project.
+## 15. Referensi
 
-```text
-Header
-├── Sapaan dan tanggal
-├── Workspace switcher
-└── Primary action: Tambah Task / Buka Project
-
-Summary strip
-├── Task saya
-├── Task terlambat
-├── Task terblokir
-└── Project perlu perhatian
-
-Main grid
-├── Task saya berdasarkan status
-├── Beban kerja per PIC
-├── Progress Project
-└── Activity Log terbaru
-```
-
-Setiap summary card harus berfungsi sebagai filter shortcut. Contoh, klik `Task terlambat` membuka daftar Task dengan filter `deadline < hari ini`.
-
-### 17.3 Context Sidebar Project
-
-Saat Project aktif, header sidebar menampilkan:
-
-```text
-[Project icon] Nama Project
-DEV · Development
-Project Lead: Nama
-```
-
-Menu:
-
-```text
-Ikhtisar
-Task
-├── List
-└── Board
-Milestone              (jika aktif)
-Activity Log
-──────────────
-Project settings       (jika berwenang)
-```
-
-Menu fitur tidak aktif disembunyikan. Jika Project memiliki fitur yang diaktifkan kemudian, item baru muncul di bawah konteks Project tanpa mengubah struktur global.
-
-### 17.4 Project Overview
-
-Plane menjadikan Overview sebagai pintu depan Project. Sitop mengikuti struktur ini:
-
-```text
-Project header
-├── Icon / cover sederhana
-├── Nama Project dan Project ID
-├── Status Project
-├── Unit
-├── Project Lead
-└── Menu Project
-
-Overview content
-├── Deskripsi / tujuan / success metrics
-├── Progress per status
-├── Needs attention
-│   ├── Overdue
-│   ├── Blocked
-│   └── Unassigned
-├── Milestones               (jika aktif)
-└── Activity Log terbaru
-
-Right panel
-├── Properties
-├── Updates                  (Follow-up)
-└── Activity
-```
-
-Deskripsi Project menggunakan rich text ringan dan mendukung link serta attachment bila fitur tersebut tersedia. Properties ditampilkan sebagai panel, bukan kartu besar yang menghabiskan ruang utama.
-
-### 17.5 Task List
-
-Task List adalah tampilan default karena paling efisien untuk triage dan operasi harian.
-
-```text
-Page header
-├── Breadcrumb Project
-├── Task
-├── Add Task
-└── More actions
-
-Work toolbar
-├── List / Board
-├── Filter
-├── Sort
-├── Group
-├── Display
-└── Search within Project
-
-Task table/list
-├── ID
-├── Title
-├── Status
-├── Priority
-├── PIC
-├── Deadline
-├── Labels
-└── Sub-task progress
-```
-
-Perilaku Plane-like:
-
-- menampilkan Task berdasarkan group status secara default;
-- group dapat diubah ke Priority, PIC, Label, Milestone, atau tanpa group bila fitur tersedia;
-- kolom dapat ditampilkan atau disembunyikan melalui Display;
-- klik baris membuka side peek, bukan selalu berpindah halaman;
-- klik ID menyalin identifier;
-- quick add berada di akhir group atau melalui tombol `Tambah Task`;
-- perubahan inline menyimpan ke backend dan menampilkan feedback;
-- filter yang aktif ditampilkan sebagai chip yang dapat dihapus satu per satu.
-
-### 17.6 Board
-
-Board menggunakan Task yang sama dengan List, hanya cara penyajiannya yang berbeda.
-
-```text
-Toolbar
-├── List
-├── Board aktif
-├── Filter
-├── Sort
-└── Display
-
-Board
-├── Backlog
-├── Todo
-├── In Progress
-├── In Review
-└── Done
-```
-
-Perilaku:
-
-- kartu menampilkan ID, Title, priority, PIC, deadline, label, dan indikator Sub-task;
-- drag-and-drop menjalankan validasi backend;
-- status yang memerlukan alasan membuka dialog sebelum perpindahan diterapkan;
-- perpindahan yang gagal mengembalikan kartu ke kolom awal;
-- kartu dapat dibuka melalui side peek;
-- setiap kolom memiliki quick add;
-- kolom kosong menampilkan drop target dan empty state yang ringkas;
-- mobile menggunakan horizontal scroll atau pemilih kolom, bukan memaksa semua kolom mengecil.
-
-### 17.7 Side Peek dan Full Task Page
-
-Plane membuka detail Task sebagai side peek secara default dan menyediakan mode full screen. Sitop mengikuti pola ini.
-
-```text
-List / Board
-      ↓ klik Task
-Side peek
-├── Header ringkas
-├── ID dan Title
-├── Meta row
-├── Description
-├── Sub-task / Relasi / Bukti
-├── Comment composer
-└── Activity Log
-      ↓ Open full Task
-Full Task page
-├── Breadcrumb Project
-├── Header actions
-├── ID di atas Title
-├── Meta row
-├── Description
-├── Widget toolbar
-├── Activity / Comments
-└── Properties sidebar
-```
-
-Header Task:
-
-- breadcrumb Project;
-- Task ID yang dapat disalin;
-- Title yang dapat diedit sesuai permission;
-- status, priority, PIC, start date, dan deadline sebagai meta row;
-- Subscribe atau ikuti Task;
-- Copy link;
-- menu `...` untuk archive, restore, dan aksi lain sesuai permission.
-
-Widget toolbar:
-
-- Tambah Sub-task;
-- Tambah dependency;
-- Tambah relasi;
-- Tambah link;
-- Tambah attachment;
-- Tambah bukti;
-- Buka Activity Log.
-
-Properties sidebar dikelompokkan:
-
-```text
-Details
-├── Parent Task
-├── Label
-└── Priority tambahan
-
-Project structure
-├── Milestone
-└── Project
-
-Metadata
-├── Pemohon
-├── Created by
-├── Created at
-├── Updated at
-└── Completed at
-```
-
-### 17.8 Task Description dan Comment
-
-Description adalah area konteks utama Task. Gunakan editor rich text ringan untuk heading, list, checklist, link, gambar, dan `@mention`.
-
-Komentar berada setelah konten utama dan memakai thread kronologis:
-
-```text
-Comment composer
-├── Mention
-├── Attachment
-└── Comment
-
-Comment thread
-├── Avatar / name
-├── Time
-├── Rich text
-├── Attachment
-├── Edit / Delete own comment
-└── Reply (Follow-up)
-```
-
-### 17.9 Search dan command entry
-
-Search dibuka dari top bar atau `Cmd/Ctrl + K`.
-
-Hasil MVP dikelompokkan:
-
-```text
-All
-├── Projects
-└── Tasks
-```
-
-Hasil berikutnya dapat ditambahkan:
-
-```text
-Comments | Activity Log | Pages | Milestones | Views
-```
-
-Search mendukung:
-
-- Task ID seperti `DEV-123`;
-- nama Project atau Project ID;
-- Title Task;
-- keyword pada deskripsi Task;
-- hasil yang hanya berasal dari scope yang boleh diakses user.
-
-### 17.10 Project Settings
-
-Project Settings menggunakan tab atau menu vertikal seperti Plane:
-
-```text
-General
-├── Name, Project ID, description
-├── Unit, visibility, status
-├── dates dan timezone
-└── archive
-
-Members
-├── Project Lead
-├── Default Assignee
-├── Project subscribers (Follow-up)
-└── Member list dan Project role
-
-Work structure
-├── States
-├── Labels
-└── Milestones
-
-Features
-├── Milestones
-├── Views (Follow-up)
-├── Pages (Follow-up)
-└── Project Updates (Follow-up)
-
-Audit Log
-```
-
-Project Admin melihat seluruh tab. Role lain hanya melihat tab yang diizinkan. Project arsip tidak dapat diedit sebelum di-restore.
-
-### 17.11 Archive dan restore
-
-Archive bukan delete.
-
-```text
-Active Project
-      ↓ Project Admin: Archive
-Confirmation dialog
-      ↓
-Archived Project
-      ↓ Project Admin: Restore
-Active Project
-```
-
-Saat Project diarsipkan:
-
-- Project dihapus dari sidebar aktif;
-- Task dan resource Project ikut diarsipkan;
-- data tetap utuh;
-- Project tidak muncul di search aktif;
-- item tersedia di area `Archived Projects`;
-- hanya Project Admin yang dapat restore;
-- delete permanen memakai dialog berisi konsekuensi eksplisit.
-
-## 18. Kontrak perilaku yang mengikuti Plane
-
-| Area | Perilaku sitop |
-| --- | --- |
-| Workspace | Satu sesi login bekerja di satu Workspace aktif pada satu waktu |
-| Project | Project menjadi konteks utama Task dan resource kerja |
-| Task | Title adalah input wajib; Project dan Task ID mengikuti konteks |
-| Identifier | Project ID menjadi prefix Task, misalnya `DEV-123` |
-| Layout | List dan Board menampilkan data Task yang sama |
-| Detail | Side peek menjadi default; full page tersedia |
-| Properties | Field umum berada di meta row; field sekunder di sidebar |
-| Membership | Workspace role dan Project role terpisah |
-| Lead | Project Lead adalah designation, bukan permission role |
-| Default Assignee | Opsional di Project |
-| Archive | Data dipertahankan dan dapat di-restore |
-| Feature menu | Feature toggle menambah atau menyembunyikan menu Project |
-| Search | Hanya menampilkan objek yang boleh diakses |
-
-Adaptasi khusus sitop:
-
-- Unit menjadi konteks organisasi tambahan.
-- Bahasa dan istilah memakai bahasa Indonesia.
-- `Done` wajib memiliki catatan penyelesaian atau bukti.
-- `Blocked`, `Canceled`, dan `Reopen` wajib memiliki alasan.
-- Audit Log lebih menonjol karena kebutuhan keterlacakan operasional.
-- MVP hanya mengaktifkan fitur yang masuk PRD MVP Core dan Follow-up.
-
-## 19. Checklist detail sebelum implementasi UI
-
-Setiap layar harus menjawab:
-
-- Workspace dan Project apa yang sedang aktif?
-- User melihat data dalam scope apa?
-- User dapat melakukan aksi apa?
-- Apakah action tersebut membutuhkan Project Admin, Contributor, Commenter, atau Viewer?
-- Apa yang terjadi ketika data kosong?
-- Apa yang terjadi ketika request gagal?
-- Apakah perubahan status membutuhkan alasan atau bukti?
-- Apakah Activity Log dan Audit Log perlu diperbarui?
-- Apakah side peek mempertahankan konteks daftar?
-- Bagaimana perilakunya di mobile?
-- Apa alternatif non-drag untuk Board?
-- Apa yang terjadi setelah archive, restore, atau delete?
+- Scope produk: PRD.md
+- Roadmap besar: docs/SIM_TI_PROJECT_HANDOFF.md
+- Pola project management: https://docs.plane.so/workspaces/overview
+- Pola organisasi dan view kerja: https://docs.plane.so/introduction/tutorials/organize-and-view-work

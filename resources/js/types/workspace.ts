@@ -38,3 +38,15 @@ export type WorkspaceRoleOption = {
     value: string;
     label: string;
 };
+
+export type UnitContext = {
+    active: {
+        id: string;
+        workspace_id: string;
+        name: string;
+        role: string | null;
+        role_label: string | null;
+        can_manage: boolean;
+    } | null;
+    available: Array<{ id: string; workspace_id: string; name: string }>;
+};

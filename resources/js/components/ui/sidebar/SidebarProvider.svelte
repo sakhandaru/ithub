@@ -26,6 +26,9 @@
 
     const initialOpen = () => {
         if (typeof document === 'undefined') return defaultOpen;
+        const storedOpen = window.localStorage.getItem('ithub-sidebar-open');
+        if (storedOpen === 'true') return true;
+        if (storedOpen === 'false') return false;
         const hasCookie = document.cookie.includes(`${SIDEBAR_COOKIE_NAME}=false`);
         return hasCookie ? false : defaultOpen;
     };
@@ -51,6 +54,7 @@
         open.set(value);
         if (typeof document !== 'undefined') {
             document.cookie = `${SIDEBAR_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+            window.localStorage.setItem('ithub-sidebar-open', String(value));
         }
     };
 

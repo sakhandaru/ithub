@@ -9,10 +9,13 @@ use App\Models\Project;
 use App\Models\SavedView;
 use App\Models\Task;
 use App\Models\TaskRelation;
+use App\Models\User;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -33,6 +36,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Relation::morphMap([
+            'project' => Project::class,
+            'task' => Task::class,
+            'workspace' => Workspace::class,
+        ]);
+
+        Gate::before(function (User $user, string $ability): ?bool {
+            if ($user->isAuditor() && ! in_array($ability, ['view', 'viewAny', 'download'], true)) {
+                return false;
+            }
+
+            return null;
+        });
 
         Route::bind('workspace', function (string $value): Workspace {
             $user = request()->user();
@@ -89,9 +106,14 @@ class AppServiceProvider extends ServiceProvider
 
         Route::bind('attachment', function (string $value): Attachment {
             $task = request()->route('task');
-            abort_unless($task instanceof Task, 404);
+            if ($task instanceof Task) {
+                return $task->attachments()->findOrFail($value);
+            }
 
-            return $task->attachments()->findOrFail($value);
+            $project = request()->route('project');
+            abort_unless($project instanceof Project, 404);
+
+            return $project->attachments()->findOrFail($value);
         });
 
         Route::bind('savedView', function (string $value): SavedView {

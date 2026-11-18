@@ -12,12 +12,15 @@ final class RequestContext
 
     private const string Timezone = 'timezone';
 
-    public static function assign(string $requestId, int|string|null $actorId, string $timezone): void
+    private const string IpAddress = 'ip_address';
+
+    public static function assign(string $requestId, int|string|null $actorId, string $timezone, ?string $ipAddress): void
     {
         Context::add([
             self::RequestId => $requestId,
             self::ActorId => $actorId,
             self::Timezone => $timezone,
+            self::IpAddress => $ipAddress,
         ]);
     }
 
@@ -40,5 +43,12 @@ final class RequestContext
         $timezone = Context::get(self::Timezone);
 
         return is_string($timezone) ? $timezone : 'UTC';
+    }
+
+    public static function ipAddress(): ?string
+    {
+        $ipAddress = Context::get(self::IpAddress);
+
+        return is_string($ipAddress) ? $ipAddress : null;
     }
 }

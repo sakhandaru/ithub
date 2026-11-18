@@ -1,19 +1,21 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { getContext } from 'svelte';
-    import { SHEET_CONTEXT, type SheetContext } from './context';
+    import { Dialog as DialogPrimitive } from 'bits-ui';
+    import type { ComponentProps, Snippet } from 'svelte';
 
-    let { asChild = false, children }: { asChild?: boolean; children?: Snippet<[Record<string, unknown>]> } = $props();
-
-    const { setOpen } = getContext<SheetContext>(SHEET_CONTEXT);
-
-    const handleClick = () => setOpen(false);
+    let { asChild = false, children, ...rest }: Omit<ComponentProps<typeof DialogPrimitive.Close>, 'children'> & {
+        asChild?: boolean;
+        children?: Snippet<[Record<string, any>]>;
+    } = $props();
 </script>
 
 {#if asChild}
-    {@render children?.({ onClick: handleClick })}
+    <DialogPrimitive.Close {...rest}>
+        {#snippet child({ props })}
+            {@render children?.({ ...props, onClick: props.onclick })}
+        {/snippet}
+    </DialogPrimitive.Close>
 {:else}
-    <button type="button" onclick={handleClick}>
+    <DialogPrimitive.Close {...rest}>
         {@render children?.({})}
-    </button>
+    </DialogPrimitive.Close>
 {/if}

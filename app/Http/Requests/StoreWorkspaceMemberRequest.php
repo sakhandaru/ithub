@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\SystemRole;
 use App\Enums\WorkspaceRole;
 use App\Models\User;
 use App\Models\Workspace;
@@ -31,7 +32,7 @@ class StoreWorkspaceMemberRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email', Rule::exists('users', 'email')],
-            'role' => ['required', Rule::enum(WorkspaceRole::class)],
+            'role' => ['required', Rule::in([...array_column(SystemRole::cases(), 'value'), ...array_column(WorkspaceRole::cases(), 'value')])],
         ];
     }
 
@@ -58,8 +59,8 @@ class StoreWorkspaceMemberRequest extends FormRequest
             'email.required' => 'Email anggota wajib diisi.',
             'email.email' => 'Format email tidak valid.',
             'email.exists' => 'User dengan email tersebut belum terdaftar di ithub.',
-            'role.required' => 'Role Workspace wajib dipilih.',
-            'role.enum' => 'Role Workspace tidak valid.',
+            'role.required' => 'Role login wajib dipilih.',
+            'role.enum' => 'Role login tidak valid.',
         ];
     }
 }

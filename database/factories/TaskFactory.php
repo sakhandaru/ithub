@@ -26,6 +26,7 @@ class TaskFactory extends Factory
             'identifier' => fake()->unique()->bothify('TASK-####'),
             'title' => fake()->sentence(4),
             'description' => null,
+            'expected_outcome' => null,
             'status' => TaskStatus::Backlog,
             'priority' => null,
             'assignee_id' => null,

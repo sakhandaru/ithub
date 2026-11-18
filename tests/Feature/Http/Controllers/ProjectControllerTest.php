@@ -28,6 +28,15 @@ test('workspace administrators can create and view a project', function () {
         ->assertOk();
 });
 
+test('the project create route opens the create modal on the project index', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.create', $workspace))
+        ->assertRedirect(route('workspaces.projects.index', $workspace, absolute: false).'?create=1');
+});
+
 test('a user outside the project workspace cannot resolve the project route', function () {
     $owner = User::factory()->create();
     $outsider = User::factory()->create();
@@ -63,7 +72,24 @@ test('unit visibility is limited to members of the project unit', function () {
     $this->actingAs($otherMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertNotFound();
 });
 
-test('project dashboard calculates task health from project data', function () {
+test('project members can view a unit project even when they belong to another unit', function () {
+    $owner = User::factory()->create();
+    $projectMember = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $unit = $workspace->units->first();
+    $workspace->memberships()->create(['user_id' => $projectMember->id, 'role' => 'member', 'invited_by_id' => $owner->id, 'joined_at' => now()]);
+    $project = Project::factory()->create([
+        'workspace_id' => $workspace->id,
+        'unit_id' => $unit->id,
+        'created_by_id' => $owner->id,
+        'visibility' => ProjectVisibility::Unit,
+    ]);
+    $project->memberships()->create(['user_id' => $projectMember->id, 'role' => 'contributor', 'joined_at' => now()]);
+
+    $this->actingAs($projectMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertOk();
+});
+
+test('project detail and legacy dashboard route are available', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
     $project = app(CreateProject::class)->handle($owner, $workspace, [
@@ -76,12 +102,37 @@ test('project dashboard calculates task health from project data', function () {
     $blockedTask->update(['status' => 'blocked']);
 
     $this->actingAs($owner)
-        ->get(route('workspaces.projects.dashboard', [$workspace, $project]))
+        ->get(route('workspaces.projects.show', [$workspace, $project]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('projects/Dashboard')
-            ->where('stats.total', 2)
-            ->where('stats.done', 1)
-            ->where('stats.blocked', 1)
-            ->where('stats.progress', 50));
+            ->component('projects/Show')
+            ->missing('stats'));
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.dashboard', [$workspace, $project]))
+        ->assertRedirect(route('workspaces.projects.show', [$workspace, $project]));
+});
+
+test('project cycles and modules pages require project visibility', function () {
+    $owner = User::factory()->create();
+    $outsider = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal',
+        'identifier' => 'PORTAL',
+        'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace',
+        'status' => 'active',
+    ]);
+
+    foreach (['cycles' => 'projects/Cycles', 'modules' => 'projects/Modules'] as $page => $component) {
+        $this->actingAs($owner)
+            ->get(route("workspaces.projects.{$page}", [$workspace, $project]))
+            ->assertOk()
+            ->assertInertia(fn ($inertia) => $inertia->component($component));
+
+        $this->actingAs($outsider)
+            ->get(route("workspaces.projects.{$page}", [$workspace, $project]))
+            ->assertNotFound();
+    }
 });

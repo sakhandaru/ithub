@@ -17,10 +17,17 @@
 </script>
 
 <AppShell variant="sidebar">
-    <AppSidebar />
-    <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">
-        <AppSidebarHeader {breadcrumbs} />
-        {@render children?.()}
-    </AppContent>
+    <div class="flex h-full min-h-0 w-full overflow-hidden bg-background">
+        <div class="flex h-full min-h-0 w-full flex-col overflow-hidden bg-muted md:rounded-2xl md:border md:border-border/80 md:shadow-lg">
+            <AppSidebarHeader {breadcrumbs} />
+            <div class="flex min-h-0 flex-1">
+            <AppSidebar>
+                <AppContent variant="sidebar" class="min-w-0 flex-1 overflow-x-clip bg-card">
+                    {@render children?.()}
+                </AppContent>
+            </AppSidebar>
+            </div>
+        </div>
+    </div>
     <Toaster />
 </AppShell>

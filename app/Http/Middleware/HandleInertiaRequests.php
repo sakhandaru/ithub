@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\SystemRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Project;
 use App\Models\User;
@@ -45,8 +46,25 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'workspaceContext' => fn (): array => $this->workspaceContext($request->user()),
-            'projectContext' => fn (): array => $this->projectContext($request->route('project')),
-            'notifications' => fn (): array => $request->user() ? ['unread_count' => $request->user()->unreadNotifications()->count()] : ['unread_count' => 0],
+            'unitContext' => fn (): array => $this->unitContext($request->user()),
+            'projectContext' => fn (): array => $this->projectContext($request->route('project'), $request->user()),
+            'notifications' => fn (): array => $request->user() ? [
+                'unread_count' => $request->user()->unreadNotifications()->count(),
+                'items' => $request->user()->notifications()
+                    ->latest()
+                    ->limit(5)
+                    ->get()
+                    ->map(fn ($notification): array => [
+                        'id' => (string) $notification->id,
+                        'title' => $notification->data['title'] ?? 'Notifikasi baru',
+                        'message' => $notification->data['message'] ?? '',
+                        'url' => $notification->data['url'] ?? route('notifications.index'),
+                        'read_at' => $notification->read_at?->toIso8601String(),
+                        'created_at' => $notification->created_at?->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all(),
+            ] : ['unread_count' => 0, 'items' => []],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
@@ -83,11 +101,60 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
-    /** @return array{active: array{id: string, workspace_id: string, name: string, identifier: string, archived: bool}|null} */
-    private function projectContext(mixed $project): array
+    /** @return array{active: array{id: string, workspace_id: string, name: string, role: string|null, role_label: string|null, can_manage: bool}|null, available: list<array{id: string, workspace_id: string, name: string}>} */
+    private function unitContext(?User $user): array
     {
+        if (! $user) {
+            return ['active' => null, 'available' => []];
+        }
+
+        $memberships = $user->unitMemberships()->with('unit:id,name,workspace_id')->get()->sortBy(fn ($membership) => $membership->unit->name)->values();
+        $activeMembership = $memberships->firstWhere('unit_id', $user->active_unit_id);
+        $role = $user->system_role ?? SystemRole::User;
+
+        return [
+            'active' => $activeMembership ? [
+                'id' => (string) $activeMembership->unit->id,
+                'workspace_id' => (string) $activeMembership->unit->workspace_id,
+                'name' => $activeMembership->unit->name,
+                'role' => $role->value,
+                'role_label' => $role->label(),
+                'can_manage' => $user->isAdmin(),
+            ] : null,
+            'available' => array_values($memberships->map(fn ($membership) => [
+                'id' => (string) $membership->unit->id,
+                'workspace_id' => (string) $membership->unit->workspace_id,
+                'name' => $membership->unit->name,
+            ])->all()),
+        ];
+    }
+
+    /** @return array{active: array{id: string, workspace_id: string, name: string, identifier: string, archived: bool}|null, available: list<array{id: string, workspace_id: string, name: string, identifier: string}>} */
+    private function projectContext(mixed $project, ?User $user): array
+    {
+        if (! $user) {
+            return ['active' => null, 'available' => []];
+        }
+
+        $activeUnit = $user->activeUnit;
+        $available = $activeUnit
+            ? $activeUnit->projects()
+                ->visibleTo($user)
+                ->whereNull('archived_at')
+                ->orderBy('name')
+                ->get(['id', 'workspace_id', 'name', 'identifier'])
+                ->map(fn (Project $availableProject): array => [
+                    'id' => (string) $availableProject->id,
+                    'workspace_id' => (string) $availableProject->workspace_id,
+                    'name' => $availableProject->name,
+                    'identifier' => $availableProject->identifier,
+                ])
+                ->values()
+                ->all()
+            : [];
+
         if (! $project instanceof Project) {
-            return ['active' => null];
+            return ['active' => null, 'available' => $available];
         }
 
         return [
@@ -98,6 +165,7 @@ class HandleInertiaRequests extends Middleware
                 'identifier' => $project->identifier,
                 'archived' => $project->isArchived(),
             ],
+            'available' => $available,
         ];
     }
 }

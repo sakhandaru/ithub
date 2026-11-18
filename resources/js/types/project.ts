@@ -17,6 +17,10 @@ export type ProjectSummary = {
     start_date: string | null;
     target_date: string | null;
     archived: boolean;
+    tasks_count: number;
+    completed_tasks_count: number;
+    blocked_tasks_count: number;
+    overdue_tasks_count: number;
 };
 
 export type ProjectMember = {

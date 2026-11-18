@@ -24,6 +24,7 @@ class AssignRequestContext
             requestId: $requestId,
             actorId: $request->user()?->getAuthIdentifier(),
             timezone: is_string($timezone) ? $timezone : (string) config('sitop.default_timezone'),
+            ipAddress: $request->ip(),
         );
 
         $response = $next($request);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\SystemRole;
 use App\Enums\WorkspaceRole;
 use App\Models\WorkspaceMembership;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -28,15 +29,15 @@ class UpdateWorkspaceMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role' => ['required', Rule::enum(WorkspaceRole::class)],
+            'role' => ['required', Rule::in([...array_column(SystemRole::cases(), 'value'), ...array_column(WorkspaceRole::cases(), 'value')])],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'role.required' => 'Role Workspace wajib dipilih.',
-            'role.enum' => 'Role Workspace tidak valid.',
+            'role.required' => 'Role login wajib dipilih.',
+            'role.enum' => 'Role login tidak valid.',
         ];
     }
 }

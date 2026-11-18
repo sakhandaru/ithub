@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { Link, page, router } from '@inertiajs/svelte';
-    import BookOpen from '@lucide/svelte/icons/book-open';
-    import Folder from '@lucide/svelte/icons/folder';
-    import LayoutGrid from '@lucide/svelte/icons/layout-grid';
-    import Menu from '@lucide/svelte/icons/menu';
-    import Search from '@lucide/svelte/icons/search';
-    import Bell from '@lucide/svelte/icons/bell';
+    import BookOpen from 'carbon-icons-svelte/lib/Book.svelte';
+    import Folder from 'carbon-icons-svelte/lib/Folder.svelte';
+    import LayoutGrid from 'carbon-icons-svelte/lib/Grid.svelte';
+    import Menu from 'carbon-icons-svelte/lib/Menu.svelte';
+    import Search from 'carbon-icons-svelte/lib/Search.svelte';
+    import Bell from 'carbon-icons-svelte/lib/Notification.svelte';
     import AppLogo from '@/components/AppLogo.svelte';
     import AppLogoIcon from '@/components/AppLogoIcon.svelte';
     import Breadcrumbs from '@/components/Breadcrumbs.svelte';

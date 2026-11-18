@@ -23,7 +23,7 @@ final class UpdateProjectMemberRole
             $workspaceRole = $project->workspace->memberships()->whereBelongsTo($actor)->first();
             $isWorkspaceAdmin = $workspaceRole && in_array((string) $workspaceRole->getRawOriginal('role'), ['owner', 'workspace_admin'], true);
 
-            if ($actorRole !== ProjectRole::ProjectAdmin && ! $isWorkspaceAdmin) {
+            if (! $actor->isAdmin() && $actorRole !== ProjectRole::ProjectAdmin && ! $isWorkspaceAdmin) {
                 throw ValidationException::withMessages(['role' => 'Anda tidak dapat mengubah role Project ini.']);
             }
 

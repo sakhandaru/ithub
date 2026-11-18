@@ -24,9 +24,11 @@ class StoreTaskRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string', 'max:10000'],
+            'expected_outcome' => ['nullable', 'string', 'max:10000'],
             'priority' => ['nullable', 'string', Rule::in(['urgent', 'high', 'medium', 'low'])],
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
             'requester_id' => ['nullable', 'integer', 'exists:users,id'],
+            'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
             'label_ids' => ['sometimes', 'array'],
             'label_ids.*' => ['ulid', 'exists:labels,id'],
@@ -72,6 +74,12 @@ class StoreTaskRequest extends FormRequest
             $milestoneId = $this->input('milestone_id');
             if ($milestoneId !== null && ! $project->milestones()->whereKey($milestoneId)->exists()) {
                 $validator->errors()->add('milestone_id', 'Milestone harus berasal dari Project yang sama.');
+            }
+
+            $startDate = $this->input('start_date');
+            $dueDate = $this->input('due_date');
+            if ($startDate !== null && $dueDate !== null && $startDate > $dueDate) {
+                $validator->errors()->add('start_date', 'Tanggal mulai tidak boleh setelah deadline.');
             }
         }];
     }

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Eye from '@lucide/svelte/icons/eye';
-    import EyeOff from '@lucide/svelte/icons/eye-off';
+    import Eye from 'carbon-icons-svelte/lib/View.svelte';
+    import EyeOff from 'carbon-icons-svelte/lib/ViewOff.svelte';
     import { Input } from '@/components/ui/input';
     import { cn } from '@/lib/utils';
 

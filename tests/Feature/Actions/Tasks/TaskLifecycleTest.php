@@ -31,14 +31,22 @@ test('task identifiers increment within a project and apply the default assignee
     $project->memberships()->create(['user_id' => $assignee->id, 'role' => ProjectRole::Contributor, 'joined_at' => now()]);
     $project->update(['default_assignee_id' => $assignee->id]);
 
-    $first = app(CreateTask::class)->handle($owner, $project, ['title' => 'Pasang monitoring']);
+    $first = app(CreateTask::class)->handle($owner, $project, [
+        'title' => 'Pasang monitoring',
+        'expected_outcome' => 'Monitoring aktif dan mengirim alert.',
+        'start_date' => '2026-11-18',
+        'due_date' => '2026-11-20',
+    ]);
     $second = app(CreateTask::class)->handle($owner, $project, ['title' => 'Uji backup']);
 
     expect($first->identifier)->toBe('PORTAL-1')
         ->and($second->identifier)->toBe('PORTAL-2')
         ->and($first->status)->toBe(TaskStatus::Backlog)
         ->and($first->assignee_id)->toBe($assignee->id)
-        ->and($first->requester_id)->toBe($owner->id);
+        ->and($first->requester_id)->toBe($owner->id)
+        ->and($first->expected_outcome)->toBe('Monitoring aktif dan mengirim alert.')
+        ->and($first->start_date->toDateString())->toBe('2026-11-18')
+        ->and($first->due_date->toDateString())->toBe('2026-11-20');
 });
 
 test('task transitions enforce workflow reasons and completion evidence', function () {

@@ -1,29 +1,21 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { getContext } from 'svelte';
-    import { DROPDOWN_MENU_CONTEXT, type DropdownMenuContext } from './context';
+    import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+    import type { ComponentProps, Snippet } from 'svelte';
 
-    type TriggerProps = {
-        onclick?: (event: MouseEvent) => void;
-        'aria-expanded'?: boolean;
-        'data-state'?: 'open' | 'closed';
-        [key: string]: any;
-    };
-
-    let {
-        asChild = false,
-        children,
-    }: { asChild?: boolean; children?: Snippet<[TriggerProps]> } = $props();
-
-    const { open, setOpen } = getContext<DropdownMenuContext>(DROPDOWN_MENU_CONTEXT);
-
-    const handleClick = () => setOpen(!open());
+    let { asChild = false, children, ...rest }: Omit<ComponentProps<typeof DropdownMenuPrimitive.Trigger>, 'children'> & {
+        asChild?: boolean;
+        children?: Snippet<[Record<string, any>]>;
+    } = $props();
 </script>
 
 {#if asChild}
-    {@render children?.({ onclick: handleClick, 'aria-expanded': open(), 'data-state': open() ? 'open' : 'closed' })}
+    <DropdownMenuPrimitive.Trigger {...rest}>
+        {#snippet child({ props })}
+            {@render children?.({ ...props, onClick: props.onclick })}
+        {/snippet}
+    </DropdownMenuPrimitive.Trigger>
 {:else}
-    <button type="button" onclick={handleClick} aria-expanded={open()}>
+    <DropdownMenuPrimitive.Trigger {...rest}>
         {@render children?.({})}
-    </button>
+    </DropdownMenuPrimitive.Trigger>
 {/if}

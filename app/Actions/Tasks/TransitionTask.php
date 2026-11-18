@@ -39,6 +39,7 @@ final class TransitionTask
     public function handle(User $actor, Task $task, TaskStatus $target, ?string $reason = null, ?string $completionNote = null, ?string $evidenceUrl = null): Task
     {
         return DB::transaction(function () use ($actor, $task, $target, $reason, $completionNote, $evidenceUrl): Task {
+            $task = Task::query()->whereKey($task->getKey())->lockForUpdate()->firstOrFail();
             $current = TaskStatus::from((string) $task->getRawOriginal('status'));
             if (! in_array($target->value, self::AllowedTransitions[$current->value], true)) {
                 throw ValidationException::withMessages(['status' => "Transisi {$current->label()} ke {$target->label()} tidak diizinkan."]);

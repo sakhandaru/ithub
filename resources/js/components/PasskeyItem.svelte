@@ -1,6 +1,6 @@
 <script lang="ts">
-    import KeyRound from '@lucide/svelte/icons/key-round';
-    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import KeyRound from 'carbon-icons-svelte/lib/Key.svelte';
+    import Trash2 from 'carbon-icons-svelte/lib/TrashCan.svelte';
     import { Button } from '@/components/ui/button';
     import {
         Dialog,
@@ -50,10 +50,10 @@
                 {/if}
             </div>
             <p class="text-sm text-muted-foreground">
-                Added {passkey.created_at_diff}
+                Ditambahkan {passkey.created_at_diff}
                 {#if passkey.last_used_at_diff}
                     <span class="mx-1 text-muted-foreground/50">/</span>
-                    Last used {passkey.last_used_at_diff}
+                    Terakhir digunakan {passkey.last_used_at_diff}
                 {/if}
             </p>
         </div>
@@ -75,16 +75,15 @@
         </DialogTrigger>
 
         <DialogContent>
-            <DialogTitle>Remove passkey</DialogTitle>
+            <DialogTitle>Hapus passkey</DialogTitle>
             <DialogDescription>
-                Are you sure you want to remove the "{passkey.name}" passkey?
-                You will no longer be able to use it to sign in.
+                Hapus passkey “{passkey.name}”? Perangkat ini tidak dapat digunakan lagi untuk masuk.
             </DialogDescription>
             <DialogFooter>
                 <DialogClose asChild>
                     {#snippet children(props)}
                         <Button variant="secondary" onclick={props.onClick}>
-                            Cancel
+                            Batal
                         </Button>
                     {/snippet}
                 </DialogClose>
@@ -93,7 +92,7 @@
                     disabled={isDeleting}
                     onclick={handleDelete}
                 >
-                    {isDeleting ? 'Removing...' : 'Remove passkey'}
+                    {isDeleting ? 'Menghapus...' : 'Hapus passkey'}
                 </Button>
             </DialogFooter>
         </DialogContent>

@@ -10,7 +10,9 @@ class AttachmentPolicy
 {
     public function view(User $user, Attachment $attachment): bool
     {
-        return $user->can('view', $attachment->task);
+        return $attachment->task_id !== null
+            ? $user->can('view', $attachment->task)
+            : $user->can('view', $attachment->project);
     }
 
     public function create(User $user, Task $task): bool
@@ -20,6 +22,8 @@ class AttachmentPolicy
 
     public function delete(User $user, Attachment $attachment): bool
     {
-        return $attachment->uploaded_by_id === $user->getKey() || $user->can('update', $attachment->task);
+        $parent = $attachment->task ?? $attachment->project;
+
+        return $attachment->uploaded_by_id === $user->getKey() || $user->can('update', $parent);
     }
 }

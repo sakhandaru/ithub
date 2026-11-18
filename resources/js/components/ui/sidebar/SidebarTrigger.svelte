@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getContext } from 'svelte';
-    import { PanelLeftClose, PanelLeftOpen } from '@lucide/svelte';
+    import PanelLeftClose from 'carbon-icons-svelte/lib/SidePanelClose.svelte';
+    import PanelLeftOpen from 'carbon-icons-svelte/lib/SidePanelOpen.svelte';
     import { Button } from '@/components/ui/button';
     import { cn } from '@/lib/utils';
     import { SIDEBAR_CONTEXT, type SidebarContext } from './context';

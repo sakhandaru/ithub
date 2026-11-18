@@ -11,9 +11,35 @@ use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MilestoneController extends Controller
 {
+    public function index(Workspace $workspace, Project $project): Response
+    {
+        Gate::authorize('view', $project);
+
+        return Inertia::render('projects/Milestones', [
+            'workspace' => $workspace->only(['id', 'name']),
+            'project' => $project->only(['id', 'name', 'identifier', 'archived_at']) + [
+                'archived' => $project->isArchived(),
+            ],
+            'milestones' => $project->milestones()
+                ->withCount('tasks')
+                ->orderBy('target_date')
+                ->orderBy('name')
+                ->get(['id', 'name', 'target_date'])
+                ->map(fn (Milestone $milestone): array => [
+                    'id' => $milestone->id,
+                    'name' => $milestone->name,
+                    'target_date' => $milestone->target_date?->format('Y-m-d'),
+                    'tasks_count' => $milestone->tasks_count,
+                ])
+                ->values(),
+            'canManage' => Gate::allows('update', $project),
+        ]);
+    }
+
     public function store(StoreMilestoneRequest $request, Workspace $workspace, Project $project, CreateMilestone $createMilestone): RedirectResponse
     {
         $createMilestone->handle($request->user(), $project, $request->validated());

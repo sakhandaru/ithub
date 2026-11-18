@@ -16,6 +16,7 @@ final class RecordActivity
         return ActivityLog::create([
             'workspace_id' => $workspace->getKey(),
             'actor_id' => $actor?->getKey(),
+            'ip_address' => RequestContext::ipAddress(),
             'subject_type' => $subject->getMorphClass(),
             'subject_id' => (string) $subject->getKey(),
             'action' => $action,

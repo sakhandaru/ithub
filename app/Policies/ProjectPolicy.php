@@ -24,7 +24,15 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
         if ($this->isWorkspaceAdmin($user, $project)) {
+            return true;
+        }
+
+        if ($project->memberships()->whereBelongsTo($user)->exists()) {
             return true;
         }
 
@@ -40,7 +48,7 @@ class ProjectPolicy
      */
     public function create(User $user, Workspace $workspace): bool
     {
-        return $this->workspaceRole($user, $workspace)?->canManageWorkspace() ?? false;
+        return $user->isAdmin() || ($this->workspaceRole($user, $workspace)?->canManageWorkspace() ?? false);
     }
 
     /**
@@ -87,11 +95,11 @@ class ProjectPolicy
 
     private function canManage(User $user, Project $project): bool
     {
-        return $this->isWorkspaceAdmin($user, $project)
+        return ! $user->isAuditor() && ($user->isAdmin() || $this->isWorkspaceAdmin($user, $project)
             || $project->memberships()
                 ->whereBelongsTo($user)
                 ->where('role', ProjectRole::ProjectAdmin->value)
-                ->exists();
+                ->exists());
     }
 
     private function isWorkspaceAdmin(User $user, Project $project): bool

@@ -1,20 +1,20 @@
 <script lang="ts">
     import { Form, Link, page } from '@inertiajs/svelte';
-    import Archive from '@lucide/svelte/icons/archive';
-    import CalendarDays from '@lucide/svelte/icons/calendar-days';
-    import FolderKanban from '@lucide/svelte/icons/folder-kanban';
-    import ListTodo from '@lucide/svelte/icons/list-todo';
-    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+    import Archive from 'carbon-icons-svelte/lib/Archive.svelte';
+    import CalendarDays from 'carbon-icons-svelte/lib/Calendar.svelte';
+    import FolderKanban from 'carbon-icons-svelte/lib/FolderTree.svelte';
+    import ListTodo from 'carbon-icons-svelte/lib/Task.svelte';
+    import RotateCcw from 'carbon-icons-svelte/lib/Renew.svelte';
     import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
     import ProjectArchiveController from '@/actions/App/Http/Controllers/ProjectArchiveController';
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import AppHead from '@/components/AppHead.svelte';
-    import ProjectContextNav from '@/components/ProjectContextNav.svelte';
+    import PageHeader from '@/components/PageHeader.svelte';
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
     import { toUrl } from '@/lib/utils';
-    import { formatDateTime } from '@/lib/format-date';
+    import { projectDetailBreadcrumbs } from '@/lib/page-header';
     import type { ProjectSummary, ProjectPerson } from '@/types';
 
     type Workspace = { id: string; name: string };
@@ -27,11 +27,7 @@
         tasks_count: number;
         is_read_only: boolean;
     };
-    type Activity = { id: string; description: string | null; action: string; created_at: string; actor: { id: number; name: string } | null };
-
-    let { workspace, project, activities, canManage, canRestore }: { workspace: Workspace; project: Project; activities: Activity[]; canManage: boolean; canRestore: boolean } = $props();
-    const workspaceTimezone = $derived(page.props.workspaceContext?.active?.timezone);
-
+    let { workspace, project, canManage, canRestore }: { workspace: Workspace; project: Project; canManage: boolean; canRestore: boolean } = $props();
     function confirmArchive(event: SubmitEvent): void {
         if (!window.confirm('Arsipkan Project ini? Data dan histori tetap dipertahankan.')) {
             event.preventDefault();
@@ -41,25 +37,10 @@
 
 <AppHead title={`${project.identifier} · ${project.name}`} />
 
-<div class="flex min-w-0 flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-    <header class="flex flex-col gap-5 border-b pb-6 lg:flex-row lg:items-start lg:justify-between">
-        <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <Link href={toUrl(ProjectController.index(workspace.id))} class="hover:text-foreground hover:underline">Project</Link>
-                <span aria-hidden="true">/</span>
-                <span class="font-mono">{project.identifier}</span>
-            </div>
-            <div class="mt-3 flex items-start gap-3">
-                <div class="mt-1 flex size-10 shrink-0 items-center justify-center rounded-md border bg-muted/40">
-                    <FolderKanban class="size-5 text-muted-foreground" aria-hidden="true" />
-                </div>
-                <div class="min-w-0">
-                    <h1 class="text-2xl font-semibold tracking-tight">{project.name}</h1>
-                    <p class="mt-1 text-sm text-muted-foreground">{workspace.name} · {project.unit?.name ?? 'Tanpa Unit'}</p>
-                </div>
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
+<div class="flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+    <PageHeader breadcrumbs={projectDetailBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name)}>
+        {#snippet actions()}
+            <div class="flex flex-wrap gap-2">
             {#if canManage}
                 <Button variant="outline" class="min-h-11" asChild>
                     {#snippet children(props)}
@@ -86,10 +67,10 @@
                     {/snippet}
                 </Form>
             {/if}
-        </div>
-    </header>
+            </div>
+        {/snippet}
+    </PageHeader>
 
-    <ProjectContextNav {workspace} {project} active="overview" />
 
     {#if project.archived}
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">
@@ -97,8 +78,8 @@
         </div>
     {/if}
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section class="rounded-lg border bg-card p-5 sm:p-6">
+    <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
             <div class="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">{project.status_label}</Badge>
                 <Badge variant="outline">{project.visibility_label}</Badge>
@@ -109,12 +90,12 @@
             {:else}
                 <p class="mt-2 text-sm text-muted-foreground">Belum ada deskripsi atau tujuan Project.</p>
             {/if}
-            <div class="mt-8 rounded-md border bg-muted/20 px-4 py-5">
+            <div class="mt-8 rounded-md border border-border/80 bg-surface-2/50 px-4 py-5">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-start gap-3">
                         <ListTodo class="mt-0.5 size-5 text-muted-foreground" aria-hidden="true" />
                         <div>
-                            <p class="text-sm font-medium">{project.tasks_count} Task</p>
+                            <p class="text-sm font-medium">Pekerjaan dalam Project</p>
                             <p class="mt-1 text-sm text-muted-foreground">Buka daftar Task untuk mulai bekerja.</p>
                         </div>
                     </div>
@@ -125,17 +106,9 @@
                     </Button>
                 </div>
             </div>
-            <div class="mt-8 border-t pt-6">
-                <h2 id="activity-log" class="text-sm font-semibold scroll-mt-6">Activity Log Project</h2>
-                {#if activities.length === 0}
-                    <p class="mt-3 text-sm text-muted-foreground">Belum ada aktivitas Project.</p>
-                {:else}
-                    <ol class="mt-4 grid gap-3 border-l pl-4">{#each activities.slice(0, 8) as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {formatDateTime(activity.created_at, workspaceTimezone)}</p></li>{/each}</ol>
-                {/if}
-            </div>
         </section>
 
-        <aside class="rounded-lg border bg-card p-5">
+        <aside class="rounded-lg border border-border/80 bg-surface-2/40 p-4 lg:sticky lg:top-4 lg:self-start">
             <h2 class="text-sm font-semibold">Ringkasan Project</h2>
             <dl class="mt-4 grid gap-4 text-sm">
                 <div>

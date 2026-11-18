@@ -1,15 +1,13 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { Collapsible as CollapsiblePrimitive } from 'bits-ui';
+    import type { ComponentProps } from 'svelte';
 
     let {
         children,
         ...rest
-    }: {
-        children?: Snippet;
-        [key: string]: unknown;
-    } = $props();
+    }: ComponentProps<typeof CollapsiblePrimitive.Trigger> = $props();
 </script>
 
-<button type="button" data-slot="collapsible-trigger" {...rest}>
+<CollapsiblePrimitive.Trigger data-slot="collapsible-trigger" {...rest}>
     {@render children?.()}
-</button>
+</CollapsiblePrimitive.Trigger>

@@ -18,14 +18,15 @@ final class RemoveWorkspaceMember
     {
         DB::transaction(function () use ($actor, $membership): void {
             $workspace = $membership->workspace;
-            $actorRole = WorkspaceRole::from((string) $workspace->memberships()->whereBelongsTo($actor)->firstOrFail()->getRawOriginal('role'));
+            $actorMembership = $workspace->memberships()->whereBelongsTo($actor)->first();
+            $actorRole = $actorMembership ? WorkspaceRole::from((string) $actorMembership->getRawOriginal('role')) : null;
             $membershipRole = WorkspaceRole::from((string) $membership->getRawOriginal('role'));
 
-            if ($membershipRole === WorkspaceRole::Owner && $actorRole !== WorkspaceRole::Owner) {
+            if ($membershipRole === WorkspaceRole::Owner && ! $actor->isAdmin() && $actorRole !== WorkspaceRole::Owner) {
                 throw ValidationException::withMessages(['membership' => 'Hanya Owner yang dapat menghapus Owner lain.']);
             }
 
-            if ($membershipRole === WorkspaceRole::Owner && $workspace->memberships()->where('role', WorkspaceRole::Owner->value)->count() === 1) {
+            if ($membershipRole === WorkspaceRole::Owner && ! $actor->isAdmin() && $workspace->memberships()->where('role', WorkspaceRole::Owner->value)->count() === 1) {
                 throw ValidationException::withMessages(['membership' => 'Owner terakhir tidak dapat dihapus.']);
             }
 

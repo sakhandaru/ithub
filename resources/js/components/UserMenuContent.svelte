@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Link, router } from '@inertiajs/svelte';
-    import LogOut from '@lucide/svelte/icons/log-out';
-    import Settings from '@lucide/svelte/icons/settings';
+    import LogOut from 'carbon-icons-svelte/lib/Logout.svelte';
+    import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
     import {
         DropdownMenuGroup,
         DropdownMenuItem,

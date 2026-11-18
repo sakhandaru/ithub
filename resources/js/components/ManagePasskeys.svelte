@@ -1,6 +1,6 @@
 <script lang="ts">
     import { router } from '@inertiajs/svelte';
-    import KeyRound from '@lucide/svelte/icons/key-round';
+    import KeyRound from 'carbon-icons-svelte/lib/Key.svelte';
     import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegistrationController';
     import Heading from '@/components/Heading.svelte';
     import PasskeyItem from '@/components/PasskeyItem.svelte';
@@ -30,8 +30,8 @@
     <div class="space-y-6">
         <Heading
             variant="small"
-            title="Passkeys"
-            description="Manage your passkeys for passwordless sign-in"
+            title="Passkey"
+            description="Kelola perangkat yang dapat digunakan untuk masuk tanpa kata sandi."
         />
 
         <div class="overflow-hidden rounded-lg border border-border">
@@ -46,9 +46,9 @@
                     >
                         <KeyRound class="h-7 w-7 text-muted-foreground" />
                     </div>
-                    <p class="font-medium">No passkeys yet</p>
+                    <p class="font-medium">Belum ada passkey</p>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Add a passkey to sign in without a password
+                        Tambahkan passkey untuk masuk tanpa kata sandi.
                     </p>
                 </div>
             {/if}

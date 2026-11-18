@@ -1,17 +1,14 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { Collapsible as CollapsiblePrimitive } from 'bits-ui';
+    import type { ComponentProps } from 'svelte';
 
     let {
         open = $bindable(false),
-        disabled = false,
         children,
-    }: {
-        open?: boolean;
-        disabled?: boolean;
-        children?: Snippet;
-    } = $props();
+        ...rest
+    }: ComponentProps<typeof CollapsiblePrimitive.Root> = $props();
 </script>
 
-<div data-slot="collapsible" data-state={open ? 'open' : 'closed'} data-disabled={disabled || undefined}>
+<CollapsiblePrimitive.Root bind:open data-slot="collapsible" {...rest}>
     {@render children?.()}
-</div>
+</CollapsiblePrimitive.Root>

@@ -23,7 +23,7 @@ final class RemoveProjectMember
             $workspaceMembership = $project->workspace->memberships()->whereBelongsTo($actor)->first();
             $isWorkspaceAdmin = $workspaceMembership && in_array((string) $workspaceMembership->getRawOriginal('role'), ['owner', 'workspace_admin'], true);
 
-            if ($actorRole !== ProjectRole::ProjectAdmin && ! $isWorkspaceAdmin) {
+            if (! $actor->isAdmin() && $actorRole !== ProjectRole::ProjectAdmin && ! $isWorkspaceAdmin) {
                 throw ValidationException::withMessages(['membership' => 'Anda tidak dapat mengelola anggota Project ini.']);
             }
 

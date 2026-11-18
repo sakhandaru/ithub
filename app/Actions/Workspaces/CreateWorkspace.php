@@ -31,13 +31,21 @@ final class CreateWorkspace
             ]);
 
             foreach (self::InitialUnits as $unitName) {
-                $workspace->units()->create([
+                $unit = $workspace->units()->create([
                     'name' => $unitName,
                     'created_by_id' => $creator->getKey(),
                 ]);
+
+                $unit->memberships()->create([
+                    'user_id' => $creator->getKey(),
+                    'added_by_id' => $creator->getKey(),
+                ]);
             }
 
-            $creator->forceFill(['active_workspace_id' => $workspace->getKey()])->save();
+            $creator->forceFill([
+                'active_workspace_id' => $workspace->getKey(),
+                'active_unit_id' => $workspace->units()->oldest('created_at')->value('id'),
+            ])->save();
 
             $this->recordAuditLog->handle(
                 auditable: $workspace,

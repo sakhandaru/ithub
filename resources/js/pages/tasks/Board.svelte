@@ -8,19 +8,22 @@
 
 <script lang="ts">
     import { Link, page, router } from '@inertiajs/svelte';
+    import { DragDropProvider } from '@dnd-kit/svelte';
+    import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/dom';
     import { onMount } from 'svelte';
-    import GripVertical from '@lucide/svelte/icons/grip-vertical';
-    import ListTodo from '@lucide/svelte/icons/list-todo';
-    import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
-    import Rows3 from '@lucide/svelte/icons/rows-3';
+    import MoveHorizontal from 'carbon-icons-svelte/lib/ArrowsHorizontal.svelte';
+    import Rows3 from 'carbon-icons-svelte/lib/List.svelte';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
+    import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
     import TaskTransitionController from '@/actions/App/Http/Controllers/TaskTransitionController';
     import AppHead from '@/components/AppHead.svelte';
     import ProjectContextNav from '@/components/ProjectContextNav.svelte';
-    import { Badge } from '@/components/ui/badge';
+    import PageHeader from '@/components/PageHeader.svelte';
+    import { taskBreadcrumbs } from '@/lib/page-header';
     import { Button } from '@/components/ui/button';
     import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
     import { toUrl } from '@/lib/utils';
+    import BoardColumn from '@/components/board/BoardColumn.svelte';
 
     type Workspace = { id: string; name: string };
     type Project = { id: string; name: string; identifier: string; archived_at: string | null };
@@ -28,9 +31,10 @@
     type Task = { id: string; identifier: string; title: string; status: string; status_label: string; priority_label: string | null; assignee: { id: number; name: string } | null; due_date: string | null; labels: Array<{ id: string; name: string }> };
 
     type Filters = { status: string; priority: string; assignee: string; requester: string; milestone: string; preset: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
-    let { workspace, project, tasks, statuses, filters, allowedTransitions }: { workspace: Workspace; project: Project; tasks: Task[]; statuses: Status[]; filters: Filters; allowedTransitions: Record<string, string[]> } = $props();
+    let { workspace, project, tasks, statuses, filters, allowedTransitions, embedded = false }: { workspace: Workspace; project: Project; tasks: Task[]; statuses: Status[]; filters: Filters; allowedTransitions: Record<string, string[]>; embedded?: boolean } = $props();
     let optimisticTasks = $state<Task[]>([]);
-    let draggedTask = $state<Task | null>(null);
+    let dragSnapshot = $state<Task[]>([]);
+    let draggedTaskId = $state<string | null>(null);
     let busyTaskId = $state<string | null>(null);
     let transitionTask = $state<Task | null>(null);
     let transitionTarget = $state('');
@@ -87,8 +91,6 @@
         sort: filters.sort || undefined,
         direction: filters.direction || undefined,
     });
-
-    const hasFilters = Object.values(taskQuery()).some((value) => value !== undefined);
 
     function submitTransition(task: Task, target: string, reason: string, completionNote: string): void {
         const previous = optimisticTasks;
@@ -153,47 +155,75 @@
         transitionError = '';
     }
 
-    function drop(event: DragEvent, status: string): void {
-        event.preventDefault();
-        if (draggedTask) requestTransition(draggedTask, status);
-        draggedTask = null;
+    function handleDragStart(event: DragStartEvent): void {
+        draggedTaskId = event.operation.source ? String(event.operation.source.id) : null;
+        dragSnapshot = optimisticTasks;
     }
+
+    function targetStatus(event: DragOverEvent): string | null {
+        const targetId = event.operation.target?.id;
+        if (!targetId) return null;
+
+        const value = String(targetId);
+        if (value.startsWith('column:')) return value.slice('column:'.length);
+
+        return optimisticTasks.find((task) => task.id === value)?.status ?? null;
+    }
+
+    function handleDragOver(event: DragOverEvent): void {
+        if (!draggedTaskId) return;
+        const status = targetStatus(event);
+        if (!status) return;
+
+        optimisticTasks = optimisticTasks.map((task) => task.id === draggedTaskId ? { ...task, status, status_label: statuses.find((item) => item.value === status)?.label ?? status } : task);
+    }
+
+    function resetDragState(): void {
+        optimisticTasks = dragSnapshot;
+        dragSnapshot = [];
+        draggedTaskId = null;
+    }
+
+    function handleDragEnd(event: DragEndEvent): void {
+        const task = dragSnapshot.find((item) => item.id === draggedTaskId);
+        const movedTask = optimisticTasks.find((item) => item.id === draggedTaskId);
+        const target = movedTask?.status;
+
+        resetDragState();
+
+        if (event.canceled || !task || !target || task.status === target) return;
+        requestTransition(task, target);
+    }
+
 </script>
 
-<AppHead title={project.identifier + ' · Board'} />
+{#if !embedded}
+    <AppHead title={project.identifier + ' · Board'} />
+{/if}
 
-<div class="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-    <header class="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div><p class="text-sm text-muted-foreground">{project.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">Board</h1><p class="mt-1 text-sm text-muted-foreground">Pindahkan Task berdasarkan workflow Project.</p></div>
-        <div class="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={toggleCompact}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button><Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-10 items-center rounded-md border px-3 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link></div>
-    </header>
-    <ProjectContextNav {workspace} {project} active="board" taskQuery={taskQuery()} />
+<div class={embedded ? 'min-w-0' : 'flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8'}>
+    {#if !embedded}
+        <PageHeader breadcrumbs={taskBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name, toUrl(ProjectController.show({ workspace: workspace.id, project: project.id })), toUrl(TaskController.index({ workspace: workspace.id, project: project.id })), tasks.length)} showSidebarTrigger>
+        {#snippet actions()}
+            <ProjectContextNav {workspace} {project} active="board" taskQuery={taskQuery()} />
+            <Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={toggleCompact}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button>
+            <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-8 items-center rounded-md border px-2.5 text-xs hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link>
+        {/snippet}
+    </PageHeader>
+    {/if}
     {#if project.archived_at}<div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan dan Board bersifat read-only.</div>{/if}
     {#if transitionError && !transitionOpen}<div class="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{transitionError}</div>{/if}
-    {#if hasFilters}<div class="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"><span class="font-medium text-foreground">Filter aktif</span>{#if filters.search}<span>“{filters.search}”</span>{/if}{#if filters.preset}<span>{filters.preset}</span>{/if}{#if filters.status}<span>Status: {filters.status}</span>{/if}{#if filters.priority}<span>Priority: {filters.priority}</span>{/if}{#if filters.assignee}<span>PIC dipilih</span>{/if}<Link href={toUrl(TaskController.board({ workspace: workspace.id, project: project.id }))} class="ml-auto text-foreground underline underline-offset-2">Reset</Link></div>{/if}
+    <div class="flex items-center gap-2 rounded-md border border-border/80 bg-surface-2/50 px-3 py-2 text-xs text-muted-foreground sm:hidden"><MoveHorizontal class="size-4 shrink-0" aria-hidden="true" />Geser ke samping untuk melihat semua status. Gunakan menu pada kartu untuk memindahkan Task.</div>
 
-    <div class="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground sm:hidden"><MoveHorizontal class="size-4 shrink-0" aria-hidden="true" />Geser ke samping untuk melihat semua status. Gunakan menu pada kartu untuk memindahkan Task.</div>
-
-    <div class="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory sm:gap-4 sm:snap-none" role="region" aria-label="Board Task">
-        {#each statuses as status (status.value)}
-            <section class="w-[min(82vw,18rem)] shrink-0 snap-start rounded-lg border bg-muted/20 p-3 sm:w-[20rem] sm:snap-none" ondragover={(event) => event.preventDefault()} ondrop={(event) => drop(event, status.value)} aria-label={status.label}>
-                <header class="sticky top-0 z-10 flex items-center justify-between gap-2 bg-muted/20 px-1 pb-3 pt-1"><div><h2 class="text-sm font-semibold">{status.label}</h2><p class="mt-1 text-[11px] text-muted-foreground">{tasksFor(status.value).length === 1 ? '1 Task' : `${tasksFor(status.value).length} Task`}</p></div><Badge variant={statusVariant(status.value)}>{tasksFor(status.value).length}</Badge></header>
-                <div class="grid min-h-28 gap-3 rounded-md border border-dashed p-2">
-                    {#each tasksFor(status.value) as task (task.id)}
-                        <article draggable={!project.archived_at} ondragstart={() => { draggedTask = task; }} class="rounded-md border bg-card {compact ? 'p-2' : 'p-3'} shadow-sm transition-shadow hover:shadow-md {busyTaskId === task.id ? 'opacity-50' : ''}">
-                            <div class="flex items-start gap-2"><GripVertical class="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: task.id }))} class="min-w-0 flex-1 text-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring">{task.title}</Link></div>
-                            <p class="mt-2 font-mono text-[11px] text-muted-foreground">{task.identifier}</p>
-                            <div class="mt-3 flex flex-wrap gap-1">{#if task.priority_label}<Badge variant="outline" class="text-[11px]">{task.priority_label}</Badge>{/if}{#each task.labels as label (label.id)}<Badge variant="outline" class="text-[11px]">{label.name}</Badge>{/each}</div>
-                            <div class="mt-3 flex items-center justify-between gap-2 text-xs"><span class="truncate text-muted-foreground">{task.assignee?.name ?? 'Belum ada PIC'}</span><span class={isOverdue(task) ? 'font-medium text-destructive' : 'text-muted-foreground'}>{task.due_date ?? 'Tanpa deadline'}</span></div>
-                            {#if isOverdue(task)}<p class="mt-2 text-[11px] font-medium text-destructive">Deadline terlewat</p>{/if}
-                            <label class="sr-only" for={'move-' + task.id}>Pindahkan {task.identifier}</label><select id={'move-' + task.id} aria-label={'Pindahkan ' + task.identifier} value={task.status} disabled={!!project.archived_at || busyTaskId === task.id || allowedTransitions[task.id]?.length === 0} onchange={(event) => requestTransition(task, event.currentTarget.value)} class="mt-3 h-10 w-full rounded-md border border-input bg-background px-2 text-xs"><option value={task.status}>{allowedTransitions[task.id]?.length ? 'Pindahkan ke...' : 'Tidak ada transisi'}</option>{#each statuses as next (next.value)}{#if allowedTransitions[task.id]?.includes(next.value)}<option value={next.value}>{next.label}</option>{/if}{/each}</select>
-                        </article>
-                    {/each}
-                    {#if tasksFor(status.value).length === 0}<div class="flex items-center justify-center py-8 text-xs text-muted-foreground"><ListTodo class="mr-2 size-4" aria-hidden="true" />Kosong</div>{/if}
-                </div>
-            </section>
-        {/each}
-    </div>
+    <DragDropProvider onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        <div class="min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-4" role="region" aria-label="Board Task">
+            <div class="flex w-max min-w-full gap-2.5 snap-x snap-mandatory sm:gap-3 sm:snap-none">
+                {#each statuses as status (status.value)}
+                    <BoardColumn {workspace} {project} {status} tasks={tasksFor(status.value)} {statuses} {allowedTransitions} {compact} {busyTaskId} disabled={!!project.archived_at} {isOverdue} {statusVariant} onRequestTransition={requestTransition} />
+                {/each}
+            </div>
+        </div>
+    </DragDropProvider>
 </div>
 
 <Dialog bind:open={transitionOpen} onOpenChange={(open) => { if (!open) cancelTransition(); }}>

@@ -8,9 +8,8 @@
 
 <script lang="ts">
     import { Form, Link, page } from '@inertiajs/svelte';
-    import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-    import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
-    import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+    import CheckCircle2 from 'carbon-icons-svelte/lib/CheckmarkFilled.svelte';
+    import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
     import TaskTransitionController from '@/actions/App/Http/Controllers/TaskTransitionController';
     import CommentController from '@/actions/App/Http/Controllers/CommentController';
@@ -18,6 +17,8 @@
     import TaskRelationController from '@/actions/App/Http/Controllers/TaskRelationController';
     import AppHead from '@/components/AppHead.svelte';
     import ProjectContextNav from '@/components/ProjectContextNav.svelte';
+    import PageHeader from '@/components/PageHeader.svelte';
+    import { taskDetailBreadcrumbs } from '@/lib/page-header';
     import InputError from '@/components/InputError.svelte';
     import { Badge } from '@/components/ui/badge';
     import { Button } from '@/components/ui/button';
@@ -31,10 +32,10 @@
     type Person = { id: number; name: string; email: string };
     type Option = { value: string; label: string };
     type Task = {
-        id: string; identifier: string; title: string; description: string | null;
+        id: string; identifier: string; title: string; description: string | null; expected_outcome: string | null;
         status: string; status_label: string; priority: string | null; priority_label: string | null;
         assignee: Person | null; requester: Person | null; creator: Person | null;
-        due_date: string | null; completed_at: string | null; completion_note: string | null;
+        start_date: string | null; due_date: string | null; completed_at: string | null; completion_note: string | null;
         evidence_url: string | null; blocked_reason: string | null; canceled_reason: string | null;
         reopen_reason: string | null; labels: Array<{ id: string; name: string; color: string | null }>;
         created_at: string | null; updated_at: string | null;
@@ -59,18 +60,16 @@
 
 <AppHead title={task.identifier + ' · ' + task.title} />
 
-<div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-    <header class="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
-        <div class="min-w-0">
-            <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }))} class="inline-flex min-h-9 items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft class="size-4" aria-hidden="true" />Kembali ke Task</Link>
-            <div class="mt-4 flex items-start gap-3"><div class="mt-1 flex size-10 shrink-0 items-center justify-center rounded-md border bg-muted/40"><ClipboardList class="size-5 text-muted-foreground" aria-hidden="true" /></div><div class="min-w-0"><p class="font-mono text-xs text-muted-foreground">{task.identifier}</p><h1 class="mt-1 text-2xl font-semibold tracking-tight">{task.title}</h1><p class="mt-1 text-sm text-muted-foreground">{project.name} · {project.identifier}</p></div></div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2 sm:justify-end"><Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}{#if canTransition && transitionStatuses.length > 0}<a href="#status-form" class="inline-flex min-h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{primaryActionLabel}</a>{/if}</div>
-    </header>
+<div class="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+    <PageHeader breadcrumbs={taskDetailBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name, toUrl(ProjectController.show({ workspace: workspace.id, project: project.id })), toUrl(TaskController.index({ workspace: workspace.id, project: project.id })), task.identifier + ' · ' + task.title)} showSidebarTrigger>
+        {#snippet actions()}
+            <ProjectContextNav {workspace} {project} active="tasks" />
+            <Badge variant={task.status === 'done' ? 'secondary' : 'outline'}>{task.status_label}</Badge>{#if task.priority_label}<Badge variant="outline">{task.priority_label}</Badge>{/if}{#if canTransition && transitionStatuses.length > 0}<a href="#status-form" class="inline-flex min-h-10 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{primaryActionLabel}</a>{/if}
+        {/snippet}
+    </PageHeader>
 
-    <ProjectContextNav {workspace} {project} active="tasks" />
 
-    <div class="sticky top-12 z-20 -mx-4 flex items-center gap-3 border-y bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:-mx-6 sm:px-6 lg:hidden" aria-label="Ringkasan Task">
+    <div class="sticky top-12 z-20 -mx-4 flex items-center gap-3 border-y border-border/80 bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden" aria-label="Ringkasan Task">
         <div class="min-w-0 flex-1">
             <p class="font-mono text-[11px] text-muted-foreground">{task.identifier}</p>
             <p class="truncate text-sm font-semibold">{task.title}</p>
@@ -83,39 +82,40 @@
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">Project ini diarsipkan. Task bersifat read-only sampai Project dipulihkan.</div>
     {/if}
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
-        <div class="grid gap-6">
-            <section class="rounded-lg border bg-card p-5 sm:p-6">
+    <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <div class="grid gap-5">
+            <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-4"><div><h2 class="text-sm font-semibold">Deskripsi dan konteks</h2><p class="mt-1 text-xs text-muted-foreground">Informasi yang membantu pekerjaan ini dikerjakan dengan benar.</p></div>{#if task.milestone}<Badge variant="outline">{task.milestone.name}</Badge>{/if}</div>
                 {#if canUpdate}
                     <Form {...TaskController.update.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-5">
                         {#snippet children({ errors, processing })}
                             <div class="grid gap-2"><Label for="task-title">Judul</Label><Input id="task-title" name="title" value={task.title} required maxlength={200} /><InputError message={errors.title} /></div>
                             <div class="grid gap-2"><Label for="task-description">Deskripsi</Label><textarea id="task-description" name="description" rows={7} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{task.description ?? ''}</textarea><InputError message={errors.description} /></div>
-                            <div class="grid gap-4 sm:grid-cols-2"><div class="grid gap-2"><Label for="task-priority">Priority</Label><select id="task-priority" name="priority" value={task.priority ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tidak ada</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select><InputError message={errors.priority} /></div><div class="grid gap-2"><Label for="task-due-date">Deadline</Label><Input id="task-due-date" name="due_date" type="date" value={task.due_date ?? ''} /><InputError message={errors.due_date} /></div></div>
+                            <div class="grid gap-2"><Label for="task-expected-outcome">Hasil yang diharapkan</Label><textarea id="task-expected-outcome" name="expected_outcome" rows={4} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{task.expected_outcome ?? ''}</textarea><InputError message={errors.expected_outcome} /></div>
+                            <div class="grid gap-4 sm:grid-cols-3"><div class="grid gap-2"><Label for="task-priority">Priority</Label><select id="task-priority" name="priority" value={task.priority ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tidak ada</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select><InputError message={errors.priority} /></div><div class="grid gap-2"><Label for="task-start-date">Mulai</Label><Input id="task-start-date" name="start_date" type="date" value={task.start_date ?? ''} /><InputError message={errors.start_date} /></div><div class="grid gap-2"><Label for="task-due-date">Deadline</Label><Input id="task-due-date" name="due_date" type="date" value={task.due_date ?? ''} /><InputError message={errors.due_date} /></div></div>
                             <div class="grid gap-2"><Label for="task-milestone">Milestone</Label><select id="task-milestone" name="milestone_id" value={task.milestone?.id ?? ''} class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tanpa milestone</option>{#each milestones as milestone (milestone.id)}<option value={milestone.id}>{milestone.name}</option>{/each}</select><InputError message={errors.milestone_id} /></div>
                             <div class="flex justify-end"><Button type="submit" disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan perubahan'}</Button></div>
                         {/snippet}
                     </Form>
                 {:else}
-                    <p class="mt-5 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{task.description ?? 'Belum ada deskripsi.'}</p>
+                    <div class="mt-5 grid gap-5"><div><p class="text-xs font-medium text-muted-foreground">Deskripsi</p><p class="mt-1 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{task.description ?? 'Belum ada deskripsi.'}</p></div><div><p class="text-xs font-medium text-muted-foreground">Hasil yang diharapkan</p><p class="mt-1 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{task.expected_outcome ?? 'Belum ditentukan.'}</p></div></div>
                 {/if}
             </section>
 
-            <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <div class="flex items-center justify-between gap-3"><div><h2 class="text-sm font-semibold">Sub-task</h2><p class="mt-1 text-xs text-muted-foreground">{subtasks.length} pekerjaan turunan</p></div></div>
                 {#if subtasks.length === 0}<p class="mt-4 text-sm text-muted-foreground">Belum ada Sub-task.</p>{:else}<div class="mt-4 divide-y rounded-md border">{#each subtasks as subtask (subtask.id)}<Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: subtask.id }))} class="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/40"><span><span class="font-mono text-xs text-muted-foreground">{subtask.identifier}</span> {subtask.title}</span><Badge variant="outline">{subtask.status_label}</Badge></Link>{/each}</div>{/if}
                 {#if canManageStructure}<Form {...TaskController.store.form({ workspace: workspace.id, project: project.id })} class="mt-4 flex gap-2"><Input name="title" placeholder="Judul Sub-task" required maxlength={200} /><input type="hidden" name="parent_task_id" value={task.id} /><Button type="submit">Tambah</Button></Form>{/if}
             </section>
 
-            <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <div class="flex items-center justify-between gap-3"><div><h2 class="text-sm font-semibold">Relasi Task</h2><p class="mt-1 text-xs text-muted-foreground">{relations.length} relasi ke Task lain dalam Project.</p></div></div>
                 {#if relations.length === 0}<p class="mt-4 text-sm text-muted-foreground">Belum ada relasi.</p>{:else}<div class="mt-4 divide-y rounded-md border">{#each relations as relation (relation.id)}<div class="flex items-center justify-between gap-3 px-4 py-3 text-sm"><Link href={toUrl(TaskController.show({ workspace: workspace.id, project: project.id, task: relation.related_task.id }))} class="min-w-0 hover:underline"><span class="text-xs text-muted-foreground">{relation.type_label}</span> · {relation.related_task.identifier} {relation.related_task.title}</Link>{#if canManageStructure}<Form {...TaskRelationController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, relation: relation.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</div>{/each}</div>{/if}
                 {#if canManageStructure}<Form {...TaskRelationController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input name="related_task_id" placeholder="ID Task terkait" required /><select name="type" class="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="related">Terkait</option><option value="duplicate">Duplikat</option><option value="blocks">Menghalangi</option></select><Button type="submit">Tambah relasi</Button></Form>{/if}
             </section>
 
             {#if canTransition && transitionStatuses.length > 0}
-                <section id="status-form" class="scroll-mt-6 rounded-lg border border-primary/30 bg-primary/[0.03] p-5 sm:p-6">
+                <section id="status-form" class="scroll-mt-6 rounded-lg border border-primary/30 bg-primary/[0.03] p-4 sm:p-5">
                     <div class="flex items-start gap-3"><CheckCircle2 class="mt-0.5 size-4 text-primary" aria-hidden="true" /><div><h2 class="text-sm font-semibold">{primaryActionLabel}</h2><p class="mt-1 text-xs text-muted-foreground">Perubahan ini akan tercatat di Activity Log dan Audit Log.</p></div></div>
                     <Form {...TaskTransitionController.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-5">
                         {#snippet children({ errors, processing })}
@@ -128,7 +128,7 @@
                 </section>
             {/if}
 
-            <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <h2 class="text-sm font-semibold">Komentar</h2>
                 {#if canComment}
                     <Form {...CommentController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-3">
@@ -144,7 +144,7 @@
                         <p class="text-sm text-muted-foreground">Belum ada komentar.</p>
                     {:else}
                         {#each comments as comment (comment.id)}
-                            <article class="rounded-md border bg-muted/20 p-4">
+                            <article class="rounded-lg border border-border/80 bg-surface-2/50 p-4">
                                 <div class="flex items-center justify-between gap-3"><p class="text-sm font-medium">{comment.user?.name ?? 'Pengguna'}</p>{#if comment.can_delete}<Form {...CommentController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, comment: comment.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</div>
                                 <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{comment.body}</p>
                                 <p class="mt-2 text-xs text-muted-foreground">{formatDateTime(comment.created_at, workspaceTimezone)}</p>
@@ -154,7 +154,7 @@
                 </div>
             </section>
 
-            <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <h2 class="text-sm font-semibold">Bukti dan attachment</h2>
                 {#if canAttach}
                     <Form {...AttachmentController.store.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end" enctype="multipart/form-data">
@@ -167,14 +167,14 @@
                 {#if attachments.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada attachment.</p>{:else}<ul class="mt-5 grid gap-2 border-t pt-5">{#each attachments as attachment (attachment.id)}<li class="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-3 text-sm"><div><a href={toUrl(AttachmentController.download({ workspace: workspace.id, project: project.id, task: task.id, attachment: attachment.id }))} class="font-medium hover:underline">{attachment.original_name}</a><p class="mt-1 text-xs text-muted-foreground">{attachment.mime_type} · {attachment.uploader?.name ?? 'Pengguna'}</p></div>{#if canUpdate}<Form {...AttachmentController.destroy.form({ workspace: workspace.id, project: project.id, task: task.id, attachment: attachment.id })}><Button type="submit" variant="ghost" size="sm">Hapus</Button></Form>{/if}</li>{/each}</ul>{/if}
             </section>
 
-            <section class="rounded-lg border bg-card p-5 sm:p-6">
+            <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <h2 class="text-sm font-semibold">Activity Log</h2>
                 {#if activities.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada aktivitas.</p>{:else}<ol class="mt-5 grid gap-4 border-l pl-4">{#each activities as activity (activity.id)}<li><p class="text-sm">{activity.description ?? activity.action}</p><p class="mt-1 text-xs text-muted-foreground">{activity.actor?.name ?? 'Sistem'} · {formatDateTime(activity.created_at, workspaceTimezone)}</p></li>{/each}</ol>{/if}
             </section>
         </div>
 
-        <aside class="rounded-lg border bg-card p-5 lg:sticky lg:top-4 lg:self-start">
-            <div class="flex items-center justify-between gap-3"><h2 class="text-sm font-semibold">Konteks Task</h2><span class="font-mono text-[11px] text-muted-foreground">{task.identifier}</span></div>
+        <aside class="rounded-lg border border-border/80 bg-surface-2/40 p-4 lg:sticky lg:top-4 lg:self-start">
+            <div class="flex items-center justify-between gap-3 border-b border-border/70 pb-4"><h2 class="text-sm font-semibold">Konteks Task</h2><span class="font-mono text-[11px] tracking-tight text-muted-foreground">{task.identifier}</span></div>
             {#if canAssign}
                 <Form {...TaskController.assign.form({ workspace: workspace.id, project: project.id, task: task.id })} class="mt-5 grid gap-2">
                     {#snippet children({ errors, processing })}
@@ -195,13 +195,13 @@
                             <p class="mt-1 text-xs text-muted-foreground">Perbarui konteks tanpa kembali ke form utama.</p>
                         </div>
                         <div class="grid gap-2"><Label for="context-priority">Priority</Label><select id="context-priority" name="priority" value={task.priority ?? ''} class="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tidak ada</option>{#each priorities as priority (priority.value)}<option value={priority.value}>{priority.label}</option>{/each}</select><InputError message={errors.priority} /></div>
-                        <div class="grid gap-2"><Label for="context-due-date">Deadline</Label><Input id="context-due-date" name="due_date" type="date" value={task.due_date ?? ''} /><InputError message={errors.due_date} /></div>
+                        <div class="grid gap-4 sm:grid-cols-2"><div class="grid gap-2"><Label for="context-start-date">Mulai</Label><Input id="context-start-date" name="start_date" type="date" value={task.start_date ?? ''} /><InputError message={errors.start_date} /></div><div class="grid gap-2"><Label for="context-due-date">Deadline</Label><Input id="context-due-date" name="due_date" type="date" value={task.due_date ?? ''} /><InputError message={errors.due_date} /></div></div>
                         <div class="grid gap-2"><Label for="context-milestone">Milestone</Label><select id="context-milestone" name="milestone_id" value={task.milestone?.id ?? ''} class="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">Tanpa milestone</option>{#each milestones as milestone (milestone.id)}<option value={milestone.id}>{milestone.name}</option>{/each}</select><InputError message={errors.milestone_id} /></div>
                         <Button type="submit" variant="outline" disabled={processing}>{processing ? 'Menyimpan...' : 'Simpan properti'}</Button>
                     {/snippet}
                 </Form>
             {/if}
-            <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{task.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat oleh</dt><dd class="mt-1 font-medium">{task.creator?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Deadline</dt><dd class="mt-1 font-medium">{formatDate(task.due_date, workspaceTimezone)}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat</dt><dd class="mt-1 font-medium">{formatDate(task.created_at, workspaceTimezone)}</dd></div></dl>
+            <dl class="mt-6 grid gap-4 border-t pt-5 text-sm"><div><dt class="text-xs text-muted-foreground">Pemohon</dt><dd class="mt-1 font-medium">{task.requester?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat oleh</dt><dd class="mt-1 font-medium">{task.creator?.name ?? '—'}</dd></div><div><dt class="text-xs text-muted-foreground">Rentang kerja</dt><dd class="mt-1 font-medium">{task.start_date ? `${formatDate(task.start_date, workspaceTimezone)} – ${formatDate(task.due_date, workspaceTimezone)}` : formatDate(task.due_date, workspaceTimezone)}</dd></div><div><dt class="text-xs text-muted-foreground">Dibuat</dt><dd class="mt-1 font-medium">{formatDate(task.created_at, workspaceTimezone)}</dd></div></dl>
         </aside>
     </div>
 </div>

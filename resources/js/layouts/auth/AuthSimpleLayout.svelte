@@ -26,11 +26,9 @@
                     class="flex flex-col items-center gap-2 font-medium"
                 >
                     <div
-                        class="mb-1 flex h-9 w-9 items-center justify-center rounded-md"
+                        class="mb-1 flex h-12 w-32 max-w-full items-center justify-center rounded-md"
                     >
-                        <AppLogoIcon
-                            class="size-9 fill-current text-(--foreground) dark:text-white"
-                        />
+                        <AppLogoIcon />
                     </div>
                     <span class="sr-only">{title}</span>
                 </Link>

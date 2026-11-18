@@ -16,8 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'project_id', 'number', 'identifier', 'title', 'description', 'status', 'priority',
-    'assignee_id', 'requester_id', 'created_by_id', 'due_date', 'blocked_reason',
+    'project_id', 'number', 'identifier', 'title', 'description', 'expected_outcome', 'status', 'priority',
+    'assignee_id', 'requester_id', 'created_by_id', 'start_date', 'due_date', 'blocked_reason',
     'canceled_reason', 'reopen_reason', 'completion_note', 'evidence_url', 'completed_at',
     'parent_task_id', 'milestone_id',
 ])]
@@ -31,6 +31,7 @@ class Task extends Model
         return [
             'status' => TaskStatus::class,
             'priority' => TaskPriority::class,
+            'start_date' => 'immutable_date',
             'due_date' => 'immutable_date',
             'completed_at' => 'immutable_datetime',
         ];
@@ -112,7 +113,7 @@ class Task extends Model
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class, 'subject_id')
-            ->where('subject_type', self::class);
+            ->where('subject_type', $this->getMorphClass());
     }
 
     /**

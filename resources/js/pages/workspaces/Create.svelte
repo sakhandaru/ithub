@@ -10,7 +10,7 @@
     import { Form } from '@inertiajs/svelte';
     import WorkspaceController from '@/actions/App/Http/Controllers/WorkspaceController';
     import AppHead from '@/components/AppHead.svelte';
-    import Heading from '@/components/Heading.svelte';
+    import PageHeader from '@/components/PageHeader.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
@@ -21,8 +21,8 @@
 
 <AppHead title="Buat Workspace" />
 
-<div class="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-    <Heading
+<div class="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+    <PageHeader
         title="Buat Workspace"
         description="Workspace menjadi rumah kerja untuk anggota, Unit, Project, dan Task Anda."
     />

@@ -1,19 +1,21 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { getContext } from 'svelte';
-    import { DIALOG_CONTEXT, type DialogContext } from './context';
+    import { Dialog as DialogPrimitive } from 'bits-ui';
+    import type { ComponentProps, Snippet } from 'svelte';
 
-    let { asChild = false, children }: { asChild?: boolean; children?: Snippet<[Record<string, unknown>]> } = $props();
-
-    const { setOpen, open } = getContext<DialogContext>(DIALOG_CONTEXT);
-
-    const handleClick = () => setOpen(true);
+    let { asChild = false, children, ...rest }: Omit<ComponentProps<typeof DialogPrimitive.Trigger>, 'children'> & {
+        asChild?: boolean;
+        children?: Snippet<[Record<string, any>]>;
+    } = $props();
 </script>
 
 {#if asChild}
-    {@render children?.({ onClick: handleClick, 'aria-expanded': open() })}
+    <DialogPrimitive.Trigger {...rest}>
+        {#snippet child({ props })}
+            {@render children?.({ ...props, onClick: props.onclick })}
+        {/snippet}
+    </DialogPrimitive.Trigger>
 {:else}
-    <button type="button" onclick={handleClick} aria-expanded={open()}>
+    <DialogPrimitive.Trigger {...rest}>
         {@render children?.({})}
-    </button>
+    </DialogPrimitive.Trigger>
 {/if}

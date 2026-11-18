@@ -1,25 +1,21 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { getContext } from 'svelte';
-    import { SHEET_CONTEXT, type SheetContext } from './context';
+    import { Dialog as DialogPrimitive } from 'bits-ui';
+    import type { ComponentProps, Snippet } from 'svelte';
 
-    type TriggerProps = {
-        onclick?: (event: MouseEvent) => void;
-        'aria-expanded'?: boolean;
-        [key: string]: unknown;
-    };
-
-    let { asChild = false, children }: { asChild?: boolean; children?: Snippet<[TriggerProps]> } = $props();
-
-    const { setOpen, open } = getContext<SheetContext>(SHEET_CONTEXT);
-
-    const handleClick = () => setOpen(!open());
+    let { asChild = false, children, ...rest }: Omit<ComponentProps<typeof DialogPrimitive.Trigger>, 'children'> & {
+        asChild?: boolean;
+        children?: Snippet<[Record<string, any>]>;
+    } = $props();
 </script>
 
 {#if asChild}
-    {@render children?.({ onclick: handleClick, 'aria-expanded': open() })}
+    <DialogPrimitive.Trigger {...rest}>
+        {#snippet child({ props })}
+            {@render children?.({ ...props, onClick: props.onclick })}
+        {/snippet}
+    </DialogPrimitive.Trigger>
 {:else}
-    <button type="button" onclick={handleClick} aria-expanded={open()}>
+    <DialogPrimitive.Trigger {...rest}>
         {@render children?.({})}
-    </button>
+    </DialogPrimitive.Trigger>
 {/if}

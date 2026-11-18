@@ -1,16 +1,11 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { Dialog as DialogPrimitive } from 'bits-ui';
+    import type { ComponentProps } from 'svelte';
     import { cn } from '@/lib/utils';
 
-    let {
-        class: className = '',
-        children,
-    }: {
-        class?: string;
-        children?: Snippet;
-    } = $props();
+    let { class: className = '', children, ...rest }: ComponentProps<typeof DialogPrimitive.Title> = $props();
 </script>
 
-<h2 id="sheet-title" class={cn('text-lg font-semibold text-foreground', className)}>
+<DialogPrimitive.Title class={cn('text-lg font-semibold text-foreground', className)} {...rest}>
     {@render children?.()}
-</h2>
+</DialogPrimitive.Title>

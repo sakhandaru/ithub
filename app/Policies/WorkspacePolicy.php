@@ -21,7 +21,7 @@ class WorkspacePolicy
      */
     public function view(User $user, Workspace $workspace): bool
     {
-        return $workspace->memberships()->whereBelongsTo($user)->exists();
+        return $user->isAdmin() || $workspace->memberships()->whereBelongsTo($user)->exists();
     }
 
     /**
@@ -37,7 +37,7 @@ class WorkspacePolicy
      */
     public function update(User $user, Workspace $workspace): bool
     {
-        return $this->roleFor($user, $workspace)?->canManageWorkspace() ?? false;
+        return $user->isAdmin() || ($this->roleFor($user, $workspace)?->canManageWorkspace() ?? false);
     }
 
     /**

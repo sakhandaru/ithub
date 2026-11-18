@@ -22,8 +22,10 @@ class UpdateTaskRequest extends FormRequest
         return [
             'title' => ['sometimes', 'required', 'string', 'max:200'],
             'description' => ['sometimes', 'nullable', 'string', 'max:10000'],
+            'expected_outcome' => ['sometimes', 'nullable', 'string', 'max:10000'],
             'priority' => ['sometimes', 'nullable', Rule::in(['urgent', 'high', 'medium', 'low'])],
             'requester_id' => ['sometimes', 'integer', 'exists:users,id'],
+            'start_date' => ['sometimes', 'nullable', 'date'],
             'due_date' => ['sometimes', 'nullable', 'date'],
             'label_ids' => ['sometimes', 'array'],
             'label_ids.*' => ['ulid', 'exists:labels,id'],
@@ -52,6 +54,12 @@ class UpdateTaskRequest extends FormRequest
 
             if ($this->has('milestone_id') && $this->input('milestone_id') !== null && ! $task->project->milestones()->whereKey($this->input('milestone_id'))->exists()) {
                 $validator->errors()->add('milestone_id', 'Milestone harus berasal dari Project yang sama.');
+            }
+
+            $startDate = $this->input('start_date', $task->getRawOriginal('start_date'));
+            $dueDate = $this->input('due_date', $task->getRawOriginal('due_date'));
+            if ($startDate !== null && $dueDate !== null && $startDate > $dueDate) {
+                $validator->errors()->add('start_date', 'Tanggal mulai tidak boleh setelah deadline.');
             }
 
             if (! $this->has('parent_task_id') || $this->input('parent_task_id') === null) {

@@ -1,18 +1,19 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { setContext } from 'svelte';
-    import { SHEET_CONTEXT, type SheetContext } from './context';
+    import { Dialog as DialogPrimitive } from 'bits-ui';
+    import type { ComponentProps, Snippet } from 'svelte';
 
-    let { open = $bindable(false), children }: { open?: boolean; children?: Snippet } = $props();
-
-    const context: SheetContext = {
-        open: () => open,
-        setOpen: (value: boolean) => {
-            open = value;
-        },
-    };
-
-    setContext(SHEET_CONTEXT, context);
+    let {
+        open = $bindable(false),
+        onOpenChange,
+        children,
+        ...rest
+    }: Omit<ComponentProps<typeof DialogPrimitive.Root>, 'children' | 'open' | 'onOpenChange'> & {
+        open?: boolean;
+        onOpenChange?: (open: boolean) => void;
+        children?: Snippet;
+    } = $props();
 </script>
 
-{@render children?.()}
+<DialogPrimitive.Root bind:open {onOpenChange} {...rest}>
+    {@render children?.()}
+</DialogPrimitive.Root>

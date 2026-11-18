@@ -2,12 +2,12 @@
 
 use App\Models\User;
 
-test('users without a workspace are sent to workspace onboarding', function () {
+test('users without a unit are sent to unit onboarding', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('dashboard'));
 
-    $response->assertRedirect(route('workspaces.create'));
+    $response->assertRedirect(route('units.create'));
 });
 
 test('users can create a workspace with its initial units', function () {

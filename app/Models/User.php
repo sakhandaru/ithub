@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SystemRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,6 +21,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property SystemRole $system_role
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -27,10 +29,11 @@ use Laravel\Fortify\PasskeyAuthenticatable;
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
  * @property string|null $active_workspace_id
+ * @property string|null $active_unit_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'system_role'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -41,6 +44,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function activeWorkspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class, 'active_workspace_id');
+    }
+
+    /** @return BelongsTo<Unit, $this> */
+    public function activeUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'active_unit_id');
     }
 
     /** @return HasMany<WorkspaceMembership, $this> */
@@ -109,6 +118,16 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasMany(Task::class, 'created_by_id');
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->system_role === SystemRole::Admin;
+    }
+
+    public function isAuditor(): bool
+    {
+        return $this->system_role === SystemRole::Auditor;
+    }
+
     /** @return HasMany<Comment, $this> */
     public function comments(): HasMany
     {
@@ -131,6 +150,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'system_role' => SystemRole::class,
         ];
     }
 }

@@ -21,7 +21,7 @@ class WorkspaceMembershipPolicy
      */
     public function view(User $user, WorkspaceMembership $workspaceMembership): bool
     {
-        return $workspaceMembership->workspace->memberships()->whereBelongsTo($user)->exists();
+        return $user->isAdmin() || $workspaceMembership->workspace->memberships()->whereBelongsTo($user)->exists();
     }
 
     /**
@@ -37,6 +37,10 @@ class WorkspaceMembershipPolicy
      */
     public function update(User $user, WorkspaceMembership $workspaceMembership): bool
     {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
         $actorRole = $this->actorRole($user, $workspaceMembership);
 
         if ($actorRole === WorkspaceRole::Owner) {

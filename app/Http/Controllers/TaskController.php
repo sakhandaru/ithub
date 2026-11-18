@@ -29,9 +29,11 @@ use Inertia\Response;
 
 class TaskController extends Controller
 {
-    public function index(Request $request, Workspace $workspace, Project $project): Response
+    public function index(Request $request, Workspace $workspace, Project $project, TransitionTask $transitionTask): Response
     {
         Gate::authorize('view', $project);
+        $view = $request->string('view', 'board')->toString();
+        $view = in_array($view, ['list', 'board', 'calendar', 'gantt'], true) ? $view : 'board';
         $status = $request->string('status')->toString();
         $priority = $request->string('priority')->toString();
         $assignee = $request->string('assignee')->toString();
@@ -81,6 +83,8 @@ class TaskController extends Controller
             ->when($request->boolean('no_evidence'), fn ($query) => $query->whereNull('completion_note')->whereNull('evidence_url'))
             ->when($preset === 'mine', fn ($query) => $query->where('assignee_id', $request->user()->getKey()))
             ->when($preset === 'overdue', fn ($query) => $query->whereNotNull('due_date')->whereDate('due_date', '<', now())->whereNotIn('status', [TaskStatus::Done->value, TaskStatus::Canceled->value]))
+            ->when($preset === 'week', fn ($query) => $query->whereBetween('due_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()])->whereNotIn('status', [TaskStatus::Done->value, TaskStatus::Canceled->value]))
+            ->when($preset === 'no_deadline', fn ($query) => $query->whereNull('due_date'))
             ->when($preset === 'blocked', fn ($query) => $query->where('status', TaskStatus::Blocked->value))
             ->when($preset === 'unassigned', fn ($query) => $query->whereNull('assignee_id'))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search): void {
@@ -99,12 +103,16 @@ class TaskController extends Controller
                 ->first();
         }
 
+        $scheduledTasks = $tasks->filter(fn (Task $task): bool => $task->getRawOriginal('due_date') !== null)->values();
+
         return Inertia::render('tasks/Index', [
             'workspace' => $workspace->only(['id', 'name']),
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
+            'scheduledTasks' => $scheduledTasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'selectedTask' => $selectedTask ? $this->taskSummary($selectedTask, true) : null,
-            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
+            'editableTaskIds' => $tasks->filter(fn (Task $task): bool => $request->user()->can('update', $task))->modelKeys(),
+            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'week', 'overdue', 'no_deadline', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'filterMembers' => $project->memberships()->with('user:id,name')->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name])->values(),
@@ -126,7 +134,29 @@ class TaskController extends Controller
             'canCreate' => $request->user()->can('create', [Task::class, $project]),
             'canManage' => $request->user()->can('update', $selectedTask ?? $project),
             'canBulkUpdate' => $request->user()->can('update', $project),
+            'view' => $view,
+            'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
+            'allowedTransitions' => $tasks->mapWithKeys(function (Task $task) use ($transitionTask): array {
+                $current = TaskStatus::from((string) $task->getRawOriginal('status'));
+
+                return [$task->id => array_map(static fn (TaskStatus $status): string => $status->value, $transitionTask->allowedStatuses($current))];
+            })->all(),
         ]);
+    }
+
+    public function boardRedirect(Workspace $workspace, Project $project): RedirectResponse
+    {
+        return to_route('workspaces.projects.tasks.index', [$workspace, $project, 'view' => 'board']);
+    }
+
+    public function calendarRedirect(Workspace $workspace, Project $project): RedirectResponse
+    {
+        return to_route('workspaces.projects.tasks.index', [$workspace, $project, 'view' => 'calendar']);
+    }
+
+    public function ganttRedirect(Workspace $workspace, Project $project): RedirectResponse
+    {
+        return to_route('workspaces.projects.tasks.index', [$workspace, $project, 'view' => 'gantt']);
     }
 
     public function board(Request $request, Workspace $workspace, Project $project, TransitionTask $transitionTask): Response
@@ -174,6 +204,43 @@ class TaskController extends Controller
 
                 return [$task->id => array_map(static fn (TaskStatus $status): string => $status->value, $transitionTask->allowedStatuses($current))];
             })->all(),
+        ]);
+    }
+
+    public function calendar(Request $request, Workspace $workspace, Project $project): Response
+    {
+        Gate::authorize('view', $project);
+
+        $tasks = $project->tasks()
+            ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
+            ->whereNotNull('due_date')
+            ->orderBy('due_date')
+            ->orderBy('identifier')
+            ->get();
+
+        return Inertia::render('tasks/Calendar', [
+            'workspace' => $workspace->only(['id', 'name']),
+            'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
+            'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
+        ]);
+    }
+
+    public function gantt(Request $request, Workspace $workspace, Project $project): Response
+    {
+        Gate::authorize('view', $project);
+
+        $tasks = $project->tasks()
+            ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
+            ->whereNotNull('due_date')
+            ->orderBy('due_date')
+            ->orderBy('identifier')
+            ->get();
+
+        return Inertia::render('tasks/Gantt', [
+            'workspace' => $workspace->only(['id', 'name']),
+            'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
+            'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
+            'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
         ]);
     }
 
@@ -293,6 +360,7 @@ class TaskController extends Controller
             'identifier' => $task->identifier,
             'title' => $task->title,
             'description' => $detail ? $task->description : null,
+            'expected_outcome' => $detail ? $task->expected_outcome : null,
             'status' => $status->value,
             'status_label' => $status->label(),
             'priority' => $priority?->value,
@@ -301,6 +369,7 @@ class TaskController extends Controller
             'requester' => $task->requester?->only(['id', 'name', 'email']),
             'creator' => $detail ? $task->creator?->only(['id', 'name', 'email']) : null,
             'labels' => $task->labels->map(fn ($label): array => $label->only(['id', 'name', 'color']))->values(),
+            'start_date' => $task->getRawOriginal('start_date') ? CarbonImmutable::parse((string) $task->getRawOriginal('start_date'))->toDateString() : null,
             'due_date' => $task->getRawOriginal('due_date') ? CarbonImmutable::parse((string) $task->getRawOriginal('due_date'))->toDateString() : null,
             'completed_at' => $task->getRawOriginal('completed_at') ? CarbonImmutable::parse((string) $task->getRawOriginal('completed_at'))->toIso8601String() : null,
             'completion_note' => $detail ? $task->completion_note : null,

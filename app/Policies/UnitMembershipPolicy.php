@@ -21,7 +21,7 @@ class UnitMembershipPolicy
      */
     public function view(User $user, UnitMembership $unitMembership): bool
     {
-        return $unitMembership->unit->workspace->memberships()->whereBelongsTo($user)->exists();
+        return $user->isAdmin() || $unitMembership->unit->memberships()->whereBelongsTo($user)->exists();
     }
 
     /**
@@ -45,6 +45,10 @@ class UnitMembershipPolicy
      */
     public function delete(User $user, UnitMembership $unitMembership): bool
     {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
         $membership = $unitMembership->unit->workspace->memberships()->whereBelongsTo($user)->first();
 
         return $membership ? WorkspaceRole::from((string) $membership->getRawOriginal('role'))->canManageWorkspace() : false;

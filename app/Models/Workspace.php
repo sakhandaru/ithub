@@ -67,7 +67,7 @@ class Workspace extends Model
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class, 'subject_id')
-            ->where('subject_type', self::class);
+            ->where('subject_type', $this->getMorphClass());
     }
 
     /**
@@ -77,6 +77,10 @@ class Workspace extends Model
     #[Scope]
     protected function visibleTo(Builder $query, User $user): Builder
     {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
         return $query->whereHas('memberships', fn (Builder $membershipQuery) => $membershipQuery->whereBelongsTo($user));
     }
 }

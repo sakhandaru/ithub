@@ -84,6 +84,12 @@ class Project extends Model
         return $this->belongsTo(User::class, 'archived_by_id');
     }
 
+    /** @return HasMany<Attachment, $this> */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
     /** @return HasMany<ProjectMembership, $this> */
     public function memberships(): HasMany
     {
@@ -139,7 +145,7 @@ class Project extends Model
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class, 'subject_id')
-            ->where('subject_type', self::class);
+            ->where('subject_type', $this->getMorphClass());
     }
 
     /**
@@ -149,12 +155,17 @@ class Project extends Model
     #[Scope]
     protected function visibleTo(Builder $query, User $user): Builder
     {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
         return $query->where(function (Builder $visibleQuery) use ($user): void {
             $visibleQuery
                 ->whereHas('workspace.memberships', function (Builder $membershipQuery) use ($user): void {
                     $membershipQuery->whereBelongsTo($user)
                         ->whereIn('role', ['owner', 'workspace_admin']);
                 })
+                ->orWhereHas('memberships', fn (Builder $membershipQuery) => $membershipQuery->whereBelongsTo($user))
                 ->orWhere(function (Builder $workspaceQuery) use ($user): void {
                     $workspaceQuery->where('visibility', ProjectVisibility::Workspace->value)
                         ->whereHas('workspace.memberships', fn (Builder $membershipQuery) => $membershipQuery->whereBelongsTo($user));

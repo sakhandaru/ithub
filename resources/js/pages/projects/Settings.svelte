@@ -5,12 +5,14 @@
 
 <script lang="ts">
     import { Form, page } from '@inertiajs/svelte';
-    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import { createTable, tableFeatures } from '@tanstack/svelte-table';
+    import type { ColumnDef } from '@tanstack/svelte-table';
+    import Trash2 from 'carbon-icons-svelte/lib/TrashCan.svelte';
     import ProjectMemberController from '@/actions/App/Http/Controllers/ProjectMemberController';
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
-    import MilestoneController from '@/actions/App/Http/Controllers/MilestoneController';
     import AppHead from '@/components/AppHead.svelte';
-    import Heading from '@/components/Heading.svelte';
+    import DataTable from '@/components/DataTable.svelte';
+    import PageHeader from '@/components/PageHeader.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
@@ -36,7 +38,6 @@
         archived: boolean;
     };
     type AuditLog = { id: string; action: string; created_at: string; actor: { id: number; name: string } | null };
-    type Milestone = { id: string; name: string; target_date: string | null };
 
     let {
         workspace,
@@ -51,7 +52,6 @@
         visibilities,
         canManage,
         canRestore,
-        milestones,
     }: {
         workspace: Workspace;
         project: Project;
@@ -65,21 +65,36 @@
         visibilities: ProjectOption[];
         canManage: boolean;
         canRestore: boolean;
-        milestones: Milestone[];
     } = $props();
     const workspaceTimezone = $derived(page.props.workspaceContext?.active?.timezone);
+    const projectMemberFeatures = tableFeatures({});
+    const projectMemberColumns: ColumnDef<typeof projectMemberFeatures, ProjectMember>[] = [
+        { accessorFn: (member) => member.user.name, id: 'member', header: 'Anggota' },
+        { accessorKey: 'role_label', header: 'Role' },
+        { id: 'actions', header: 'Aksi' },
+    ];
+    const projectMemberTable = createTable({
+        features: projectMemberFeatures,
+        columns: projectMemberColumns,
+        get data() { return projectMembers; },
+        getRowId: (member) => member.id,
+    });
 
     function confirmRemoval(event: MouseEvent, name: string): void {
         if (!window.confirm(`Hapus ${name} dari Project?`)) {
             event.preventDefault();
         }
     }
+
+    function memberHeaderClass(headerId: string): string {
+        return headerId === 'actions' ? 'px-4 py-3 text-right font-medium' : 'px-4 py-3 font-medium';
+    }
 </script>
 
 <AppHead title={`Pengaturan · ${project.identifier}`} />
 
-<div class="flex min-w-0 flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-    <Heading title={`Pengaturan ${project.name}`} description="Kelola konfigurasi, akses, dan anggota Project." />
+<div class="flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+    <PageHeader title={`Pengaturan ${project.name}`} description="Kelola konfigurasi, akses, dan anggota Project." />
 
     {#if project.archived}
         <div class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">
@@ -87,8 +102,8 @@
         </div>
     {/if}
 
-    <div class="max-w-4xl space-y-8">
-        <section class="rounded-lg border bg-card p-5 sm:p-6">
+    <div class="max-w-4xl space-y-5">
+        <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
             <h2 class="text-base font-semibold">General</h2>
             <p class="mt-1 text-sm text-muted-foreground">Project ID tidak dapat diubah setelah Project dibuat.</p>
             <div class="mt-5 grid gap-5">
@@ -165,32 +180,15 @@
             </div>
         </section>
 
-        <section class="rounded-lg border bg-card p-5 sm:p-6">
-            <h2 id="milestones" class="text-base font-semibold scroll-mt-6">Milestone</h2>
-            <p class="mt-1 text-sm text-muted-foreground">Kelompokkan Task berdasarkan target penting Project.</p>
-            {#if canManage}
-                <Form {...MilestoneController.store.form({ workspace: workspace.id, project: project.id })} class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
-                    {#snippet children({ errors, processing })}
-                        <div class="grid flex-1 gap-2"><Label for="milestone-name">Nama milestone</Label><Input id="milestone-name" name="name" maxlength={120} required /><InputError message={errors.name} /></div>
-                        <div class="grid gap-2"><Label for="milestone-date">Target</Label><Input id="milestone-date" name="target_date" type="date" /><InputError message={errors.target_date} /></div>
-                        <Button type="submit" disabled={processing}>{processing ? 'Menambah...' : 'Tambah'}</Button>
-                    {/snippet}
-                </Form>
-            {/if}
-            <div class="mt-5 divide-y rounded-md border">
-                {#if milestones.length === 0}<p class="px-4 py-5 text-sm text-muted-foreground">Belum ada milestone.</p>{:else}{#each milestones as milestone (milestone.id)}<div class="flex items-center justify-between gap-3 px-4 py-3"><div><p class="text-sm font-medium">{milestone.name}</p><p class="text-xs text-muted-foreground">{milestone.target_date ?? 'Tanpa target'}</p></div>{#if canManage}<Form {...MilestoneController.destroy.form({ workspace: workspace.id, project: project.id, milestone: milestone.id })}><Button type="submit" variant="ghost" size="icon" aria-label={`Hapus ${milestone.name}`}><Trash2 class="size-4" aria-hidden="true" /></Button></Form>{/if}</div>{/each}{/if}
-            </div>
-        </section>
-
     {#if canViewAudit}
-        <section class="rounded-lg border bg-card p-5 sm:p-6">
+        <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
             <h2 class="text-base font-semibold">Audit Log</h2>
             <p class="mt-1 text-sm text-muted-foreground">Perubahan penting Project dan membership.</p>
             {#if auditLogs.length === 0}<p class="mt-5 text-sm text-muted-foreground">Belum ada Audit Log.</p>{:else}<ol class="mt-5 grid gap-3 border-l pl-4">{#each auditLogs as log (log.id)}<li><p class="text-sm font-medium">{log.action}</p><p class="mt-1 text-xs text-muted-foreground">{log.actor?.name ?? 'Sistem'} · {formatDateTime(log.created_at, workspaceTimezone)}</p></li>{/each}</ol>{/if}
         </section>
     {/if}
 
-        <section class="rounded-lg border bg-card p-5 sm:p-6">
+        <section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
             <h2 class="text-base font-semibold">Anggota Project</h2>
             <p class="mt-1 text-sm text-muted-foreground">Role Project berbeda dari role Workspace.</p>
             {#if canManage}
@@ -216,13 +214,10 @@
                 </Form>
             {/if}
 
-            <div class="mt-5 overflow-x-auto rounded-md border">
-                <table class="w-full min-w-[42rem] text-left text-sm">
-                    <caption class="sr-only">Daftar anggota Project</caption>
-                    <thead class="bg-muted/40 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">Anggota</th><th class="px-4 py-3 font-medium">Role</th><th class="px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
-                    <tbody class="divide-y">
-                        {#each projectMembers as member (member.id)}
-                            <tr>
+            <DataTable table={projectMemberTable} caption="Daftar anggota Project" tableClass="w-full min-w-[42rem] text-left text-sm" wrapperClass="mt-5" getHeaderClass={memberHeaderClass}>
+                {#snippet children(row)}
+                    {@const member = row.original}
+                    <tr>
                                 <td class="px-4 py-3"><div class="font-medium">{member.user.name}</div><div class="text-xs text-muted-foreground">{member.user.email}</div></td>
                                 <td class="px-4 py-3">
                                     {#if canManage}
@@ -244,11 +239,9 @@
                                         </Form>
                                     {/if}
                                 </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
+                    </tr>
+                {/snippet}
+            </DataTable>
         </section>
 
         {#if canRestore}

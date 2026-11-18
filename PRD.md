@@ -1,8 +1,8 @@
-# sitop — PRD MVP
+# ithub — Product Requirements Document
 
 ## 1. Ringkasan
 
-sitop adalah workspace operasional internal untuk mengelola pekerjaan TI lintas unit dan project. MVP berfokus pada pengelolaan Project dan Task dari pencatatan sampai selesai, dengan konteks PIC, status, deadline, komentar, bukti, Activity Log, dan Audit Log.
+ithub adalah ruang operasional internal untuk mengelola pekerjaan TI lintas Unit dan Project. MVP berfokus pada pengelolaan Project dan Task dari pencatatan sampai selesai, dengan konteks PIC, status, deadline, komentar, bukti, Activity Log, dan Audit Log.
 
 Dokumen ini menurunkan keputusan implementasi dari `SIM_TI_PROJECT_HANDOFF.md`. Handoff tetap menjadi dokumen visi, konteks produk, dan roadmap besar. Dokumen ini menjadi acuan scope MVP dan acceptance criteria.
 
@@ -21,7 +21,7 @@ Tim Development, Infra, dan Operasional dapat mengelola seluruh pekerjaan Projec
 
 - Mulai dari pekerjaan nyata.
 - Project menjadi konteks utama kumpulan Task.
-- Akses mengikuti Workspace, Unit, Project, role, dan membership.
+- Akses mengikuti Unit, Project, role, dan membership.
 - Authorization selalu diperiksa di backend.
 - Task yang selesai harus memiliki catatan penyelesaian atau bukti.
 - Perubahan penting dicatat otomatis.
@@ -32,8 +32,7 @@ Tim Development, Infra, dan Operasional dapat mengelola seluruh pekerjaan Projec
 
 | Istilah | Definisi |
 | --- | --- |
-| Workspace | Ruang kerja utama sitop |
-| Unit | Area kerja seperti Development, Infra, dan Operasional |
+| Unit | Ruang organisasi utama yang dapat ditentukan sendiri |
 | Project | Wadah dan konteks yang berisi kumpulan Task |
 | Task | Satu pekerjaan individual yang perlu dikelola sampai selesai |
 | Project Lead | Penanggung jawab pelaksanaan keseluruhan Project |
@@ -48,12 +47,15 @@ Tim Development, Infra, dan Operasional dapat mengelola seluruh pekerjaan Projec
 
 ## 5. Struktur akses
 
-### 5.1 Workspace role
+### 5.1 Login role
 
-- **Owner** — pemilik utama Workspace.
-- **Workspace Admin** — mengelola anggota, Unit, Project, permission, dan konfigurasi Workspace.
-- **Member** — anggota internal yang dapat bekerja di Project yang diikuti.
-- **Guest** — akses terbatas untuk pengguna eksternal atau akses khusus.
+- **Admin** — role login global yang mengelola User, Unit, membership, permission dasar, konfigurasi sistem, dan Audit Log.
+- **User** — akun operasional biasa. Aksesnya ditentukan oleh membership Unit dan Project.
+- **Auditor** — role login read-only untuk pemeriksaan, bukti, histori perubahan, dan laporan audit sesuai scope.
+
+`User` adalah identitas akun operasional, bukan role permission yang berdiri sendiri. Role login tidak menggantikan role Project.
+
+Auditor tidak boleh membuat, mengubah, menghapus, mengarsipkan, atau mengubah permission. Auditor dapat membaca objek dan mengunduh bukti yang berada dalam scope audit.
 
 ### 5.2 Project role
 
@@ -62,7 +64,7 @@ Tim Development, Infra, dan Operasional dapat mengelola seluruh pekerjaan Projec
 - **Commenter** — melihat Task serta menambahkan komentar dan attachment.
 - **Viewer** — hanya membaca data yang diizinkan.
 
-Satu user memiliki satu Workspace role dan dapat memiliki Project role yang berbeda pada setiap Project.
+Satu user dapat menjadi anggota beberapa Unit dan memiliki Project role yang berbeda pada setiap Project.
 
 ### 5.3 Penugasan yang bukan role
 
@@ -76,10 +78,10 @@ Project Admin dan Project Lead dapat merupakan orang yang sama, tetapi keduanya 
 
 ## 6. Navigasi dua tingkat
 
-sitop wajib menggunakan navigasi dua tingkat:
+ithub wajib menggunakan navigasi dua tingkat:
 
 - **Bilah tingkat pertama** untuk berpindah antar-area bisnis seperti Pekerjaan, Pengetahuan, Operasional, Kepatuhan, dan Laporan.
-- **Bilah tingkat kedua** untuk menampilkan konteks Workspace, Unit, Project, pencarian, notifikasi, menu area aktif, pengaturan, dan profil.
+- **Bilah tingkat kedua** untuk menampilkan konteks Unit, Project, pencarian, notifikasi, menu area aktif, pengaturan, dan profil.
 
 Aturan:
 
@@ -91,28 +93,22 @@ Aturan:
 
 ## 7. Unit dan membership
 
-MVP memiliki tiga Unit awal:
-
-- Development;
-- Infra;
-- Operasional.
-
 Aturan:
 
-- Unit berfungsi sebagai struktur organisasi, grouping, dan filter.
+- Unit adalah struktur organisasi utama dan dapat dibuat, diubah, serta diarsipkan.
 - Satu Project memiliki satu Unit utama.
 - Anggota Project dapat berasal dari Unit mana pun.
 - User boleh menjadi anggota beberapa Unit dan Project.
-- Workspace Admin mengelola membership Unit.
+- Admin mengelola membership Unit dan role login.
 - Project Admin mengelola membership Project.
 - Menambahkan user ke Project tidak otomatis menambahkan user ke Unit.
-- Unit Admin atau Unit Lead menjadi fitur lanjutan.
+- Unit yang diarsipkan tidak menerima Project baru dan tetap menyimpan histori.
 
 ## 8. Visibility Project
 
 Project memiliki tiga pilihan visibility:
 
-- **Workspace** — terlihat oleh semua anggota Workspace.
+- **Unit** — terlihat oleh anggota Unit terkait.
 - **Unit** — terlihat oleh anggota Unit terkait.
 - **Private** — hanya terlihat oleh user yang diundang.
 
@@ -122,7 +118,7 @@ Default Project adalah `Unit`.
 
 ### 8.1 Pembuatan Project
 
-Secara default, hanya Owner dan Workspace Admin yang dapat membuat Project. Permission tambahan untuk mengizinkan Member membuat Project dapat ditambahkan kemudian.
+Secara default, hanya Admin Utama dan Admin Unit yang dapat membuat Project. Permission tambahan untuk mengizinkan Anggota Unit membuat Project dapat ditambahkan kemudian.
 
 Project memiliki:
 
@@ -159,7 +155,7 @@ Project yang sudah `Completed` atau `Canceled` dapat di-archive dan di-restore.
 - Data, Task, Sub-task, Activity Log, dan Audit Log tetap dipertahankan.
 - Project arsip bersifat read-only sampai dipulihkan.
 - Project Admin dapat mengarsipkan Project.
-- Project Admin atau Workspace Admin dapat memulihkan Project.
+- Project Admin atau Admin Unit dapat memulihkan Project.
 - Penghapusan permanen dibatasi untuk permission tinggi dan memerlukan konfirmasi.
 
 ### 8.4 Project Admin dan Project Lead
@@ -291,7 +287,8 @@ Activity Log dapat dilihat user yang memiliki akses ke Project atau Task. Contoh
 
 Audit Log dapat dilihat:
 
-- Workspace Admin untuk scope Workspace;
+- Admin untuk scope sistem dan Unit;
+- Auditor untuk membaca bukti, histori perubahan, dan Audit Log sesuai scope;
 - Project Admin untuk scope Project.
 
 Audit Log menyimpan actor, action, timestamp, object, request ID, nilai sebelum, dan nilai sesudah bila relevan. Perubahan status, PIC, priority, deadline, role, permission, attachment privat, dan archive/restore wajib dicatat.
@@ -308,7 +305,17 @@ Audit Log menyimpan actor, action, timestamp, object, request ID, nilai sebelum,
 - progress Project;
 - Activity Log terbaru.
 
-### 12.2 Dashboard Workspace
+### 12.2 Beranda lintas Unit
+
+- Task aktif dari semua Unit yang diikuti user;
+- Task saya lintas Unit;
+- Task terlambat dan terblokir lintas Unit;
+- Project yang perlu perhatian lintas Unit;
+- perubahan terbaru lintas Unit.
+
+Beranda tidak mengubah konteks Unit aktif. Link Project dan Task harus tetap membawa Unit/Project scope asalnya.
+
+### 12.3 Dasbor Unit
 
 - Task saya;
 - Task terlambat;
@@ -321,7 +328,7 @@ Audit Log menyimpan actor, action, timestamp, object, request ID, nilai sebelum,
 
 Semua data Dashboard mengikuti permission user.
 
-### 12.3 Search dan filter
+### 12.4 Search dan filter
 
 MVP Core menyediakan Global Search untuk Project dan Task. Search lanjutan untuk komentar, Activity Log, halaman, dokumen, dan objek operasional menjadi tahap berikutnya.
 
@@ -374,10 +381,10 @@ Tidak semua layar wajib menampilkan seluruh keadaan tersebut. Tombol fitur yang 
 ## 16. Keamanan dan kebutuhan non-fungsional
 
 - Authorization selalu diperiksa di backend.
-- Akses Workspace, Unit, Project, Task, dan attachment mengikuti membership dan role.
+- Akses Unit, Project, Task, dan attachment mengikuti membership dan role.
 - Attachment privat tidak boleh diakses melalui URL publik tanpa authorization.
 - Perubahan penting masuk Audit Log.
-- Waktu disimpan konsisten dan ditampilkan mengikuti timezone Workspace.
+- Waktu disimpan konsisten dan ditampilkan mengikuti timezone sistem atau Unit.
 - Task menggunakan identifier unik berbasis Project ID.
 - Objek penting menggunakan archive/restore atau soft delete.
 - Request gagal tidak boleh meninggalkan perubahan parsial.
@@ -406,9 +413,8 @@ Sebuah fitur MVP dianggap selesai jika:
 ### 17.1 MVP Core
 
 - login dan session;
-- Workspace dan membership;
-- Unit Development, Infra, dan Operasional;
-- Workspace role dan Project role;
+- Admin Utama, Unit, dan membership;
+- Unit role dan Project role;
 - visibility Project;
 - pembuatan dan pengelolaan Project;
 - Project ID, Project Admin, dan Project Lead;
@@ -426,7 +432,7 @@ Sebuah fitur MVP dianggap selesai jika:
 - Sub-task;
 - relasi antar-Task;
 - milestone;
-- Dashboard Workspace lintas Project;
+- Dashboard Unit lintas Project;
 - workload per PIC;
 - Global Search dan filter lanjutan;
 - Saved View backend per user dan Project;
@@ -454,7 +460,7 @@ Pembagian ini adalah urutan delivery. Model data dan permission harus tetap disi
 
 ### MVP Core
 
-- minimal 80% pekerjaan aktif pilot tercatat di sitop;
+- minimal 80% pekerjaan aktif pilot tercatat di ithub;
 - minimal 90% Task aktif memiliki PIC;
 - minimal 80% Task aktif memiliki deadline atau alasan belum memiliki deadline;
 - 100% Task berstatus `Done` memiliki catatan penyelesaian atau bukti;
@@ -464,7 +470,7 @@ Pembagian ini adalah urutan delivery. Model data dan permission harus tetap disi
 
 ### MVP Follow-up
 
-- Dashboard Workspace menampilkan kondisi lintas Unit dan Project;
+- Dashboard Unit menampilkan kondisi Project dalam Unit;
 - Task terlambat dan terblokir dapat ditemukan lebih awal;
 - beban kerja PIC dapat dilihat;
 - notifikasi in-app yang relevan berjalan;
@@ -476,3 +482,10 @@ Pembagian ini adalah urutan delivery. Model data dan permission harus tetap disi
 - Workflow bebas per Project dapat ditambahkan setelah workflow standar terbukti.
 - Unit Admin atau Unit Lead dapat ditambahkan ketika pengelolaan lintas Unit membutuhkan delegasi.
 - Modul Pengetahuan, Operasional, Dokumen, Kepatuhan, Integrasi, dan Automasi mengikuti roadmap pada handoff.
+Sidebar area Pekerjaan menggunakan struktur berikut agar user memahami ruang kerja personal, Unit, dan Project sejak awal:
+
+- Pekerjaan: Task baru, Beranda, dan Tugas saya;
+- Unit: Projects, Aktivitas, Dasbor, Analitik, Arsip, dan Pengaturan Unit;
+- Project: Task, Views, Pages, Cycles, Modules, Intake, Releases, Milestone, Pembaruan Project, Activity Log, dan Pengaturan Project.
+
+Fitur yang belum diimplementasikan boleh tampil pada shell navigasi sebagai `Segera hadir`, tetapi tidak boleh menjadi tombol atau link yang mengarah ke halaman palsu.

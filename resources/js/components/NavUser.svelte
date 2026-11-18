@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '@inertiajs/svelte';
-    import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+    import ChevronsUpDown from 'carbon-icons-svelte/lib/ChevronSort.svelte';
     import {
         DropdownMenu,
         DropdownMenuContent,
@@ -29,7 +29,7 @@
                             size="lg"
                             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                             data-test="sidebar-menu-button"
-                            onclick={props.onclick}
+                            onclick={props.onClick}
                             aria-expanded={props['aria-expanded']}
                             data-state={props['data-state']}
                         >

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Workspaces\UpdateWorkspace;
-use App\Enums\WorkspaceRole;
+use App\Enums\SystemRole;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Models\Unit;
 use App\Models\UnitMembership;
@@ -26,15 +26,13 @@ class WorkspaceSettingsController extends Controller
             'units' => fn ($query) => $query->with(['memberships.user'])->orderBy('name'),
         ]);
 
-        $currentMembership = $workspace->memberships->firstWhere('user_id', auth()->id());
-
         return Inertia::render('workspaces/Settings', [
             'workspace' => $workspace->only(['id', 'name', 'timezone']),
             'memberships' => $workspace->memberships->map(fn (WorkspaceMembership $membership): array => [
                 'id' => $membership->id,
                 'user' => $membership->user->only(['id', 'name', 'email']),
-                'role' => WorkspaceRole::from((string) $membership->getRawOriginal('role'))->value,
-                'role_label' => WorkspaceRole::from((string) $membership->getRawOriginal('role'))->label(),
+                'role' => ($membership->user->system_role ?? SystemRole::User)->value,
+                'role_label' => ($membership->user->system_role ?? SystemRole::User)->label(),
                 'joined_at' => CarbonImmutable::parse((string) $membership->getRawOriginal('joined_at'))->toIso8601String(),
             ])->values(),
             'units' => $workspace->units->map(fn (Unit $unit): array => [
@@ -45,12 +43,12 @@ class WorkspaceSettingsController extends Controller
                     'user' => $membership->user->only(['id', 'name', 'email']),
                 ])->values(),
             ])->values(),
-            'roles' => collect(WorkspaceRole::cases())->map(fn (WorkspaceRole $role) => [
+            'roles' => collect(SystemRole::cases())->map(fn (SystemRole $role) => [
                 'value' => $role->value,
                 'label' => $role->label(),
             ]),
             'timezones' => config('sitop.workspace_timezones'),
-            'canAssignOwner' => $currentMembership && WorkspaceRole::from((string) $currentMembership->getRawOriginal('role')) === WorkspaceRole::Owner,
+            'canAssignOwner' => false,
         ]);
     }
 

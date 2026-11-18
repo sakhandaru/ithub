@@ -1,5 +1,5 @@
 <script lang="ts">
-    import CircleAlert from '@lucide/svelte/icons/circle-alert';
+    import CircleAlert from 'carbon-icons-svelte/lib/WarningAlt.svelte';
     import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
     let {

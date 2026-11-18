@@ -3,19 +3,22 @@
     import { dashboard } from '@/routes';
 
     export const layout = {
-        breadcrumbs: [{ title: 'Pengaturan Workspace', href: dashboard() }],
+        breadcrumbs: [{ title: 'Pengaturan Unit', href: dashboard() }],
     };
 </script>
 
 <script lang="ts">
     import { Form } from '@inertiajs/svelte';
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import { createTable, tableFeatures } from '@tanstack/svelte-table';
+    import type { ColumnDef } from '@tanstack/svelte-table';
+    import ChevronDown from 'carbon-icons-svelte/lib/ChevronDown.svelte';
+    import Trash2 from 'carbon-icons-svelte/lib/TrashCan.svelte';
     import UnitController from '@/actions/App/Http/Controllers/UnitController';
     import UnitMemberController from '@/actions/App/Http/Controllers/UnitMemberController';
     import WorkspaceMemberController from '@/actions/App/Http/Controllers/WorkspaceMemberController';
     import AppHead from '@/components/AppHead.svelte';
-    import Heading from '@/components/Heading.svelte';
+    import DataTable from '@/components/DataTable.svelte';
+    import PageHeader from '@/components/PageHeader.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
@@ -30,76 +33,51 @@
         units,
         roles,
         timezones,
-        canAssignOwner,
     }: {
         workspace: Workspace;
         memberships: WorkspaceMember[];
         units: WorkspaceUnit[];
         roles: WorkspaceRoleOption[];
         timezones: string[];
-        canAssignOwner: boolean;
+        canAssignOwner?: boolean;
     } = $props();
 
-    const assignableRoles = $derived(
-        canAssignOwner ? roles : roles.filter((role) => role.value !== 'owner'),
-    );
+    const assignableRoles = $derived(roles);
+    const workspaceMemberFeatures = tableFeatures({});
+    const workspaceMemberColumns: ColumnDef<typeof workspaceMemberFeatures, WorkspaceMember>[] = [
+        { accessorFn: (member) => member.user.name, id: 'member', header: 'Anggota' },
+        { accessorKey: 'role_label', header: 'Role' },
+        { id: 'actions', header: 'Aksi' },
+    ];
+    const workspaceMemberTable = createTable({
+        features: workspaceMemberFeatures,
+        columns: workspaceMemberColumns,
+        get data() { return memberships; },
+        getRowId: (member) => member.id,
+    });
 
     function confirmRemoval(message: string): boolean {
         return window.confirm(message);
     }
+
+    function memberHeaderClass(headerId: string): string {
+        return headerId === 'actions' ? 'px-4 py-3 text-right font-medium' : 'px-4 py-3 font-medium';
+    }
 </script>
 
-<AppHead title="Pengaturan Workspace" />
+<AppHead title="Pengaturan Unit" />
 
-<div class="flex min-w-0 flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-    <Heading
-        title="Pengaturan Workspace"
-        description="Kelola identitas, anggota, Unit, dan timezone Workspace."
+<div class="flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+    <PageHeader
+        title="Pengaturan Unit dan Anggota"
+        description="Kelola anggota Unit dan struktur Project."
     />
 
-    <div class="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <div class="min-w-0 space-y-8">
-            <section id="general" class="rounded-lg border bg-card p-5 sm:p-6">
+    <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div class="min-w-0 space-y-5">
+            <section id="members" class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <div class="mb-5">
-                    <h2 class="text-base font-semibold">General</h2>
-                    <p class="mt-1 text-sm text-muted-foreground">Informasi dasar yang digunakan di seluruh Workspace.</p>
-                </div>
-
-                <Form {...WorkspaceSettingsController.update.form(workspace.id)} class="grid gap-5">
-                    {#snippet children({ errors, processing })}
-                        <div class="grid gap-2">
-                            <Label for="workspace-name">Nama Workspace</Label>
-                            <Input id="workspace-name" name="name" value={workspace.name} required maxlength={120} />
-                            <InputError message={errors.name} />
-                        </div>
-
-                        <div class="grid gap-2">
-                            <Label for="workspace-timezone">Timezone</Label>
-                            <select
-                                id="workspace-timezone"
-                                name="timezone"
-                                value={workspace.timezone}
-                                class="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                                {#each timezones as timezone}
-                                    <option value={timezone}>{timezone}</option>
-                                {/each}
-                            </select>
-                            <InputError message={errors.timezone} />
-                        </div>
-
-                        <div class="flex justify-end">
-                            <Button type="submit" class="min-h-11" disabled={processing}>
-                                {processing ? 'Menyimpan...' : 'Simpan perubahan'}
-                            </Button>
-                        </div>
-                    {/snippet}
-                </Form>
-            </section>
-
-            <section id="members" class="rounded-lg border bg-card p-5 sm:p-6">
-                <div class="mb-5">
-                    <h2 class="text-base font-semibold">Anggota Workspace</h2>
+                    <h2 class="text-base font-semibold">Anggota Unit</h2>
                     <p class="mt-1 text-sm text-muted-foreground">Tambahkan user yang sudah terdaftar dan atur role mereka.</p>
                 </div>
 
@@ -123,19 +101,10 @@
                     {/snippet}
                 </Form>
 
-                <div class="overflow-x-auto rounded-md border">
-                    <table class="w-full min-w-[42rem] text-left text-sm">
-                        <caption class="sr-only">Daftar anggota Workspace</caption>
-                        <thead class="bg-muted/40 text-xs text-muted-foreground">
-                            <tr>
-                                <th class="px-4 py-3 font-medium">Anggota</th>
-                                <th class="px-4 py-3 font-medium">Role</th>
-                                <th class="px-4 py-3 text-right font-medium">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y">
-                            {#each memberships as member (member.id)}
-                                <tr>
+                <DataTable table={workspaceMemberTable} caption="Daftar anggota Unit" tableClass="w-full min-w-[42rem] text-left text-sm" wrapperClass="rounded-md border" getHeaderClass={memberHeaderClass}>
+                    {#snippet children(row)}
+                        {@const member = row.original}
+                        <tr>
                                     <td class="px-4 py-3">
                                         <div class="font-medium">{member.user.name}</div>
                                         <div class="text-xs text-muted-foreground">{member.user.email}</div>
@@ -147,9 +116,6 @@
                                                     {#each assignableRoles as role}
                                                         <option value={role.value}>{role.label}</option>
                                                     {/each}
-                                                    {#if member.role === 'owner' && !canAssignOwner}
-                                                        <option value="owner">Owner</option>
-                                                    {/if}
                                                 </select>
                                                 <Button type="submit" variant="outline" class="min-h-10" disabled={processing}>Simpan</Button>
                                                 <InputError message={errors.role} />
@@ -162,20 +128,18 @@
                                             options={{ preserveScroll: true }}
                                         >
                                             {#snippet children({ processing })}
-                                                <Button type="submit" variant="ghost" size="icon" class="min-h-10 min-w-10 text-destructive hover:text-destructive" disabled={processing} aria-label={`Hapus ${member.user.name}`} onclick={(event) => { if (!confirmRemoval(`Hapus ${member.user.name} dari Workspace?`)) event.preventDefault(); }}>
+                                                <Button type="submit" variant="ghost" size="icon" class="min-h-10 min-w-10 text-destructive hover:text-destructive" disabled={processing} aria-label={`Hapus ${member.user.name}`} onclick={(event) => { if (!confirmRemoval(`Hapus ${member.user.name} dari Unit?`)) event.preventDefault(); }}>
                                                     <Trash2 class="size-4" aria-hidden="true" />
                                                 </Button>
                                             {/snippet}
                                         </Form>
                                     </td>
-                                </tr>
-                            {/each}
-                        </tbody>
-                    </table>
-                </div>
+                        </tr>
+                    {/snippet}
+                </DataTable>
             </section>
 
-            <section id="units" class="rounded-lg border bg-card p-5 sm:p-6">
+            <section id="units" class="rounded-lg border border-border/80 bg-card p-4 sm:p-5">
                 <div class="mb-5">
                     <h2 class="text-base font-semibold">Unit</h2>
                     <p class="mt-1 text-sm text-muted-foreground">Unit menjadi grouping organisasi dan filter untuk pekerjaan berikutnya.</p>
@@ -238,7 +202,7 @@
                                         <div class="grid flex-1 gap-2">
                                             <Label for={`member-${unit.id}`}>Tambah anggota Unit</Label>
                                             <select id={`member-${unit.id}`} name="user_id" class="h-11 rounded-md border border-input bg-background px-3 text-sm" required>
-                                                <option value="">Pilih anggota Workspace</option>
+                                                <option value="">Pilih anggota Unit</option>
                                                 {#each memberships as member (member.id)}
                                                     <option value={member.user.id}>{member.user.name} · {member.user.email}</option>
                                                 {/each}
@@ -256,11 +220,10 @@
         </div>
 
         <aside class="hidden xl:block">
-            <div class="sticky top-6 rounded-lg border bg-card p-4">
+            <div class="sticky top-6 rounded-lg border border-border/80 bg-surface-2/40 p-4">
                 <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Di halaman ini</p>
-                <nav class="mt-3 grid gap-1 text-sm" aria-label="Bagian pengaturan Workspace">
-                    <a href="#general" class="rounded-md px-3 py-2 hover:bg-muted">General</a>
-                    <a href="#members" class="rounded-md px-3 py-2 hover:bg-muted">Anggota Workspace</a>
+                <nav class="mt-3 grid gap-1 text-sm" aria-label="Bagian pengaturan Unit">
+                    <a href="#members" class="rounded-md px-3 py-2 hover:bg-muted">Anggota</a>
                     <a href="#units" class="rounded-md px-3 py-2 hover:bg-muted">Unit</a>
                 </nav>
             </div>

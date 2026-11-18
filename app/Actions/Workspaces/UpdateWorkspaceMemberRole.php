@@ -3,6 +3,7 @@
 namespace App\Actions\Workspaces;
 
 use App\Actions\Audit\RecordAuditLog;
+use App\Enums\SystemRole;
 use App\Enums\WorkspaceRole;
 use App\Models\User;
 use App\Models\WorkspaceMembership;
@@ -13,23 +14,28 @@ final class UpdateWorkspaceMemberRole
 {
     public function __construct(private RecordAuditLog $recordAuditLog) {}
 
-    public function handle(User $actor, WorkspaceMembership $membership, WorkspaceRole $role): WorkspaceMembership
+    public function handle(User $actor, WorkspaceMembership $membership, SystemRole $role): WorkspaceMembership
     {
         return DB::transaction(function () use ($actor, $membership, $role): WorkspaceMembership {
             $workspace = $membership->workspace;
-            $actorRole = WorkspaceRole::from((string) $workspace->memberships()->whereBelongsTo($actor)->firstOrFail()->getRawOriginal('role'));
             $membershipRole = WorkspaceRole::from((string) $membership->getRawOriginal('role'));
 
-            if ($actorRole !== WorkspaceRole::Owner && ($membershipRole === WorkspaceRole::Owner || $role === WorkspaceRole::Owner)) {
-                throw ValidationException::withMessages(['role' => 'Hanya Owner yang dapat mengubah role Owner.']);
+            $legacyOwner = $workspace->memberships()
+                ->whereBelongsTo($actor)
+                ->where('role', WorkspaceRole::Owner->value)
+                ->exists();
+
+            if (! $actor->isAdmin() && ! $legacyOwner) {
+                throw ValidationException::withMessages(['role' => 'Hanya Admin yang dapat mengelola role login.']);
             }
 
-            if ($membershipRole === WorkspaceRole::Owner && $role !== WorkspaceRole::Owner && $workspace->memberships()->where('role', WorkspaceRole::Owner->value)->count() === 1) {
-                throw ValidationException::withMessages(['role' => 'Workspace harus memiliki minimal satu Owner.']);
+            if ($membership->user->isAdmin() && $role !== SystemRole::Admin && User::query()->where('system_role', SystemRole::Admin->value)->count() === 1) {
+                throw ValidationException::withMessages(['role' => 'Sistem harus memiliki minimal satu Admin.']);
             }
 
             $before = ['role' => $membershipRole->value];
-            $membership->update(['role' => $role]);
+            $membership->update(['role' => $role === SystemRole::Admin ? WorkspaceRole::Owner : WorkspaceRole::Member]);
+            $membership->user->update(['system_role' => $role]);
 
             $this->recordAuditLog->handle(
                 auditable: $membership,

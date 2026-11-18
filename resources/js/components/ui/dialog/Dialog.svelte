@@ -1,23 +1,19 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { setContext } from 'svelte';
-    import { DIALOG_CONTEXT, type DialogContext } from './context';
+    import { Dialog as DialogPrimitive } from 'bits-ui';
+    import type { ComponentProps, Snippet } from 'svelte';
 
     let {
         open = $bindable(false),
         onOpenChange,
         children,
-    }: { open?: boolean; onOpenChange?: (value: boolean) => void; children?: Snippet } = $props();
-
-    const context: DialogContext = {
-        open: () => open,
-        setOpen: (value: boolean) => {
-            open = value;
-            onOpenChange?.(value);
-        },
-    };
-
-    setContext(DIALOG_CONTEXT, context);
+        ...rest
+    }: Omit<ComponentProps<typeof DialogPrimitive.Root>, 'children' | 'open' | 'onOpenChange'> & {
+        open?: boolean;
+        onOpenChange?: (open: boolean) => void;
+        children?: Snippet;
+    } = $props();
 </script>
 
-{@render children?.()}
+<DialogPrimitive.Root bind:open {onOpenChange} {...rest}>
+    {@render children?.()}
+</DialogPrimitive.Root>
