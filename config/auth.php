@@ -114,4 +114,20 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Development bypass
+    |--------------------------------------------------------------------------
+    |
+    | The bypass is disabled by default and is intentionally configured here
+    | so the eventual login behavior can read from cached configuration.
+    |
+    */
+
+    'bypass' => [
+        'enabled' => env('AUTH_BYPASS_ENABLED', false),
+        'email' => env('AUTH_BYPASS_EMAIL'),
+        'password' => env('AUTH_BYPASS_PASSWORD'),
+    ],
+
 ];
