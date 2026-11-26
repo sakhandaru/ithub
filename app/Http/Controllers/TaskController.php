@@ -21,6 +21,7 @@ use App\Models\TaskRelation;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -39,6 +40,8 @@ class TaskController extends Controller
         $assignee = $request->string('assignee')->toString();
         $requester = $request->string('requester')->toString();
         $milestone = $request->string('milestone')->toString();
+        $module = $request->string('module')->toString();
+        $release = $request->string('release')->toString();
         $preset = $request->string('preset')->toString();
         $search = trim($request->string('search')->toString());
         $sort = $request->string('sort', 'created_at')->toString();
@@ -70,15 +73,25 @@ class TaskController extends Controller
                 $savedViewWarnings[] = 'milestone';
                 $milestone = '';
             }
+            if ($module !== '' && $module !== 'none' && ! $project->modules()->whereKey($module)->exists()) {
+                $savedViewWarnings[] = 'module';
+                $module = '';
+            }
+            if ($release !== '' && $release !== 'none' && ! $project->releases()->whereKey($release)->exists()) {
+                $savedViewWarnings[] = 'release';
+                $release = '';
+            }
         }
 
         $tasks = $project->tasks()
-            ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
+            ->with(['assignee:id,name,avatar', 'requester:id,name,avatar', 'relations.relatedTask:id,identifier,title'])
             ->when($status !== '', fn ($query) => $query->where('status', $status))
             ->when($priority !== '', fn ($query) => $query->where('priority', $priority))
             ->when($assignee !== '', fn ($query) => $query->where('assignee_id', $assignee === 'none' ? null : $assignee))
             ->when($requester !== '', fn ($query) => $query->where('requester_id', $requester))
             ->when($milestone !== '', fn ($query) => $query->where('milestone_id', $milestone === 'none' ? null : $milestone))
+            ->when($module !== '', fn ($query) => $query->where('module_id', $module === 'none' ? null : $module))
+            ->when($release !== '', fn ($query) => $query->where('release_id', $release === 'none' ? null : $release))
             ->when($request->boolean('no_deadline'), fn ($query) => $query->whereNull('due_date'))
             ->when($request->boolean('no_evidence'), fn ($query) => $query->whereNull('completion_note')->whereNull('evidence_url'))
             ->when($preset === 'mine', fn ($query) => $query->where('assignee_id', $request->user()->getKey()))
@@ -95,12 +108,17 @@ class TaskController extends Controller
             ->get();
 
         $selectedTask = null;
+        $taskDetail = null;
         $selectedId = $request->string('task')->toString();
         if ($selectedId !== '') {
             $selectedTask = $project->tasks()
-                ->with(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color'])
                 ->whereKey($selectedId)
                 ->first();
+
+            if ($selectedTask) {
+                Gate::authorize('view', $selectedTask);
+                $taskDetail = $this->taskDetailProps($request, $workspace, $project, $selectedTask, $transitionTask);
+            }
         }
 
         $scheduledTasks = $tasks->filter(fn (Task $task): bool => $task->getRawOriginal('due_date') !== null)->values();
@@ -111,12 +129,15 @@ class TaskController extends Controller
             'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'scheduledTasks' => $scheduledTasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'selectedTask' => $selectedTask ? $this->taskSummary($selectedTask, true) : null,
+            'taskDetail' => $taskDetail,
             'editableTaskIds' => $tasks->filter(fn (Task $task): bool => $request->user()->can('update', $task))->modelKeys(),
-            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'week', 'overdue', 'no_deadline', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
+            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'module' => $module, 'release' => $release, 'preset' => in_array($preset, ['mine', 'week', 'overdue', 'no_deadline', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'priorities' => collect(TaskPriority::cases())->map(fn (TaskPriority $item): array => ['value' => $item->value, 'label' => $item->label()]),
-            'filterMembers' => $project->memberships()->with('user:id,name')->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name])->values(),
+            'filterMembers' => $project->memberships()->with('user:id,name,avatar')->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])->get()->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name, 'avatar' => $membership->user->avatar])->values(),
             'filterMilestones' => $project->milestones()->orderBy('name')->get(['id', 'name']),
+            'filterModules' => $project->modules()->orderBy('name')->get(['id', 'name']),
+            'filterReleases' => $project->releases()->orderByDesc('target_date')->orderBy('name')->get(['id', 'name']),
             'savedViews' => $project->savedViews()
                 ->forUser($request->user())
                 ->orderBy('name')
@@ -136,6 +157,8 @@ class TaskController extends Controller
             'canBulkUpdate' => $request->user()->can('update', $project),
             'view' => $view,
             'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
+            'modules' => $project->modules()->orderBy('name')->get(['id', 'name', 'description']),
+            'releases' => $project->releases()->orderByDesc('target_date')->orderBy('name')->get(['id', 'name', 'status', 'target_date']),
             'allowedTransitions' => $tasks->mapWithKeys(function (Task $task) use ($transitionTask): array {
                 $current = TaskStatus::from((string) $task->getRawOriginal('status'));
 
@@ -168,17 +191,21 @@ class TaskController extends Controller
         $assignee = $request->string('assignee')->toString();
         $requester = $request->string('requester')->toString();
         $milestone = $request->string('milestone')->toString();
+        $module = $request->string('module')->toString();
+        $release = $request->string('release')->toString();
         $preset = $request->string('preset')->toString();
         $search = trim($request->string('search')->toString());
         $sort = $request->string('sort', 'created_at')->toString();
         $direction = $request->string('direction', 'desc')->toString() === 'asc' ? 'asc' : 'desc';
         $tasks = $project->tasks()
-            ->with(['assignee:id,name', 'labels:id,name,color'])
+            ->with(['assignee:id,name,avatar'])
             ->when($status !== '', fn ($query) => $query->where('status', $status))
             ->when($priority !== '', fn ($query) => $query->where('priority', $priority))
             ->when($assignee !== '', fn ($query) => $query->where('assignee_id', $assignee === 'none' ? null : $assignee))
             ->when($requester !== '', fn ($query) => $query->where('requester_id', $requester))
             ->when($milestone !== '', fn ($query) => $query->where('milestone_id', $milestone === 'none' ? null : $milestone))
+            ->when($module !== '', fn ($query) => $query->where('module_id', $module === 'none' ? null : $module))
+            ->when($release !== '', fn ($query) => $query->where('release_id', $release === 'none' ? null : $release))
             ->when($request->boolean('no_deadline'), fn ($query) => $query->whereNull('due_date'))
             ->when($request->boolean('no_evidence'), fn ($query) => $query->whereNull('completion_note')->whereNull('evidence_url'))
             ->when($preset === 'mine', fn ($query) => $query->where('assignee_id', $request->user()->getKey()))
@@ -198,7 +225,7 @@ class TaskController extends Controller
             'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
             'canTransition' => $request->user()->can('transition', $project->tasks()->first() ?? new Task(['project_id' => $project->id])),
-            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
+            'filters' => ['status' => $status, 'priority' => $priority, 'assignee' => $assignee, 'requester' => $requester, 'milestone' => $milestone, 'module' => $module, 'preset' => in_array($preset, ['mine', 'overdue', 'blocked', 'unassigned'], true) ? $preset : '', 'no_deadline' => $request->boolean('no_deadline'), 'no_evidence' => $request->boolean('no_evidence'), 'search' => $search, 'sort' => $sort, 'direction' => $direction],
             'allowedTransitions' => $tasks->mapWithKeys(function (Task $task) use ($transitionTask): array {
                 $current = TaskStatus::from((string) $task->getRawOriginal('status'));
 
@@ -212,7 +239,7 @@ class TaskController extends Controller
         Gate::authorize('view', $project);
 
         $tasks = $project->tasks()
-            ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
+            ->with(['assignee:id,name,avatar', 'requester:id,name,avatar', 'relations.relatedTask:id,identifier,title'])
             ->whereNotNull('due_date')
             ->orderBy('due_date')
             ->orderBy('identifier')
@@ -230,7 +257,7 @@ class TaskController extends Controller
         Gate::authorize('view', $project);
 
         $tasks = $project->tasks()
-            ->with(['assignee:id,name', 'requester:id,name', 'labels:id,name,color'])
+            ->with(['assignee:id,name,avatar', 'requester:id,name,avatar'])
             ->whereNotNull('due_date')
             ->orderBy('due_date')
             ->orderBy('identifier')
@@ -241,13 +268,33 @@ class TaskController extends Controller
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'tasks' => $tasks->map(fn (Task $task): array => $this->taskSummary($task))->values(),
             'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
+            'modules' => $project->modules()->orderBy('name')->get(['id', 'name', 'description']),
+            'releases' => $project->releases()->orderByDesc('target_date')->orderBy('name')->get(['id', 'name', 'status', 'target_date']),
         ]);
     }
 
-    public function show(Request $request, Workspace $workspace, Project $project, Task $task, TransitionTask $transitionTask): Response
+    public function show(Workspace $workspace, Project $project, Task $task): RedirectResponse
     {
         Gate::authorize('view', $task);
-        $task->load(['assignee:id,name,email', 'requester:id,name,email', 'creator:id,name,email', 'labels:id,name,color', 'comments.user', 'attachments.uploader', 'activityLogs.actor', 'parentTask', 'milestone', 'subtasks.assignee', 'relations.relatedTask']);
+
+        return to_route('workspaces.projects.tasks.index', [
+            'workspace' => $workspace,
+            'project' => $project,
+            'task' => $task->getKey(),
+        ]);
+    }
+
+    public function peek(Request $request, Workspace $workspace, Project $project, Task $task, TransitionTask $transitionTask): JsonResponse
+    {
+        Gate::authorize('view', $task);
+
+        return response()->json($this->taskDetailProps($request, $workspace, $project, $task, $transitionTask));
+    }
+
+    /** @return array<string, mixed> */
+    private function taskDetailProps(Request $request, Workspace $workspace, Project $project, Task $task, TransitionTask $transitionTask): array
+    {
+        $task->load(['assignee:id,name,email,avatar', 'requester:id,name,email,avatar', 'creator:id,name,email,avatar', 'comments.user', 'attachments.uploader', 'activityLogs.actor', 'milestone', 'module', 'release', 'relations.relatedTask']);
         $members = $project->memberships()
             ->with('user:id,name,email')
             ->whereIn('role', [ProjectRole::ProjectAdmin->value, ProjectRole::Contributor->value])
@@ -255,13 +302,15 @@ class TaskController extends Controller
             ->map(fn ($membership): array => ['id' => $membership->user->id, 'name' => $membership->user->name, 'email' => $membership->user->email])
             ->values();
 
-        return Inertia::render('tasks/Show', [
+        return [
             'workspace' => $workspace->only(['id', 'name']),
             'project' => $project->only(['id', 'name', 'identifier', 'archived_at']),
             'task' => $this->taskSummary($task, true),
-            'subtasks' => $task->subtasks->map(fn (Task $subtask): array => $this->taskSummary($subtask))->values(),
             'milestone' => $task->milestone?->only(['id', 'name', 'target_date']),
+            'module' => $task->module?->only(['id', 'name', 'description']),
             'milestones' => $project->milestones()->orderBy('target_date')->orderBy('name')->get(['id', 'name', 'target_date']),
+            'releases' => $project->releases()->orderByDesc('target_date')->orderBy('name')->get(['id', 'name', 'status', 'target_date']),
+            'relatedTasks' => $project->tasks()->where('tasks.id', '!=', $task->id)->orderBy('number')->get(['id', 'identifier', 'title', 'status'])->map(fn (Task $relatedTask): array => ['id' => $relatedTask->id, 'identifier' => $relatedTask->identifier, 'title' => $relatedTask->title, 'status' => $relatedTask->status->value, 'status_label' => $relatedTask->status->label()])->values(),
             'relations' => $task->relations->map(fn (TaskRelation $relation): array => ['id' => $relation->id, 'type' => (string) $relation->getRawOriginal('type'), 'type_label' => TaskRelationType::from((string) $relation->getRawOriginal('type'))->label(), 'related_task' => $this->taskSummary($relation->relatedTask)])->values(),
             'comments' => $task->comments()->with('user')->get()->map(fn ($comment): array => [
                 'id' => $comment->id,
@@ -277,14 +326,14 @@ class TaskController extends Controller
                 'mime_type' => $attachment->mime_type,
                 'size' => $attachment->size,
                 'created_at' => $attachment->created_at?->toIso8601String(),
-                'uploader' => $attachment->uploader?->only(['id', 'name']),
+                'uploader' => $attachment->uploader?->only(['id', 'name', 'avatar']),
             ])->values(),
             'activities' => $task->activityLogs()->with('actor')->latest('created_at')->get()->map(fn ($activity): array => [
                 'id' => $activity->id,
                 'action' => $activity->action,
                 'description' => $activity->description,
                 'created_at' => $activity->created_at->toIso8601String(),
-                'actor' => $activity->actor?->only(['id', 'name']),
+                'actor' => $activity->actor?->only(['id', 'name', 'avatar']),
             ])->values(),
             'members' => $members,
             'statuses' => collect(TaskStatus::cases())->map(fn (TaskStatus $item): array => ['value' => $item->value, 'label' => $item->label()]),
@@ -296,7 +345,7 @@ class TaskController extends Controller
             'canComment' => $request->user()->can('comment', $task),
             'canAttach' => $request->user()->can('attach', $task),
             'canManageStructure' => $request->user()->can('update', $task),
-        ]);
+        ];
     }
 
     public function store(StoreTaskRequest $request, Workspace $workspace, Project $project, CreateTask $createTask): RedirectResponse
@@ -365,10 +414,9 @@ class TaskController extends Controller
             'status_label' => $status->label(),
             'priority' => $priority?->value,
             'priority_label' => $priority?->label(),
-            'assignee' => $task->assignee?->only(['id', 'name', 'email']),
-            'requester' => $task->requester?->only(['id', 'name', 'email']),
+            'assignee' => $task->assignee?->only(['id', 'name', 'email', 'avatar']),
+            'requester' => $task->requester?->only(['id', 'name', 'email', 'avatar']),
             'creator' => $detail ? $task->creator?->only(['id', 'name', 'email']) : null,
-            'labels' => $task->labels->map(fn ($label): array => $label->only(['id', 'name', 'color']))->values(),
             'start_date' => $task->getRawOriginal('start_date') ? CarbonImmutable::parse((string) $task->getRawOriginal('start_date'))->toDateString() : null,
             'due_date' => $task->getRawOriginal('due_date') ? CarbonImmutable::parse((string) $task->getRawOriginal('due_date'))->toDateString() : null,
             'completed_at' => $task->getRawOriginal('completed_at') ? CarbonImmutable::parse((string) $task->getRawOriginal('completed_at'))->toIso8601String() : null,
@@ -380,8 +428,17 @@ class TaskController extends Controller
             'created_at' => $task->created_at->toIso8601String(),
             'updated_at' => $task->updated_at->toIso8601String(),
             'is_completed' => $task->isCompleted(),
-            'parent_task_id' => $task->parent_task_id,
             'milestone' => $task->milestone?->only(['id', 'name', 'target_date']),
+            'module' => $task->module?->only(['id', 'name', 'description']),
+            'release' => $task->release?->only(['id', 'name', 'status', 'target_date']),
+            'relations' => $task->relationLoaded('relations')
+                ? $task->relations->map(fn (TaskRelation $relation): array => [
+                    'id' => $relation->id,
+                    'type' => (string) $relation->getRawOriginal('type'),
+                    'type_label' => TaskRelationType::from((string) $relation->getRawOriginal('type'))->label(),
+                    'related_task' => $relation->relatedTask?->only(['id', 'identifier', 'title']),
+                ])->filter(fn (array $relation): bool => $relation['related_task'] !== null)->values()->all()
+                : [],
         ];
     }
 }

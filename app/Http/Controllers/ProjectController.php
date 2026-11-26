@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -27,11 +28,10 @@ class ProjectController extends Controller
         $createProjectOpen = $request->boolean('create');
         $activeUnit = $request->user()->activeUnit;
         $activeTaskStatuses = [
-            TaskStatus::Request->value,
             TaskStatus::Backlog->value,
             TaskStatus::Todo->value,
             TaskStatus::InProgress->value,
-            TaskStatus::InReview->value,
+            TaskStatus::Review->value,
             TaskStatus::Blocked->value,
         ];
         $projects = $workspace->projects()
@@ -79,6 +79,7 @@ class ProjectController extends Controller
                 'id' => $membership->user->id,
                 'name' => $membership->user->name,
                 'email' => $membership->user->email,
+                'avatar' => $membership->user->avatar,
             ])->values(),
             'statuses' => collect(ProjectStatus::cases())->map(fn (ProjectStatus $status): array => ['value' => $status->value, 'label' => $status->label()]),
             'visibilities' => collect(ProjectVisibility::cases())->map(fn (ProjectVisibility $visibility): array => ['value' => $visibility->value, 'label' => $visibility->label()]),
@@ -94,33 +95,17 @@ class ProjectController extends Controller
         return to_route('workspaces.projects.index', $workspace);
     }
 
-    public function show(Request $request, Workspace $workspace, Project $project): Response
+    public function show(Workspace $workspace, Project $project): RedirectResponse
     {
         Gate::authorize('view', $project);
-        $project->load(['unit', 'projectLead', 'defaultAssignee', 'creator', 'memberships.user']);
 
-        return Inertia::render('projects/Show', [
-            'workspace' => $workspace->only(['id', 'name']),
-            'project' => [
-                ...$this->projectSummary($project),
-                'description' => $project->description,
-                'project_lead' => $project->projectLead?->only(['id', 'name', 'email']),
-                'default_assignee' => $project->defaultAssignee?->only(['id', 'name', 'email']),
-                'created_by' => $project->creator?->only(['id', 'name', 'email']),
-                'members_count' => $project->memberships->count(),
-                'tasks_count' => $project->tasks_count,
-                'is_read_only' => $project->isArchived(),
-            ],
-            'canManage' => Gate::allows('update', $project),
-            'canRestore' => Gate::allows('restore', $project),
-        ]);
+        return to_route('workspaces.projects.dashboard', [$workspace, $project]);
     }
 
     public function activity(Workspace $workspace, Project $project): Response
     {
         Gate::authorize('view', $project);
         $project->load('unit');
-        $taskIds = $project->tasks()->select('id');
 
         return Inertia::render('projects/Activity', [
             'workspace' => $workspace->only(['id', 'name']),
@@ -128,15 +113,7 @@ class ProjectController extends Controller
                 ...$this->projectSummary($project),
                 'archived_at' => $project->archived_at?->toIso8601String(),
             ],
-            'activities' => ActivityLog::query()
-                ->whereBelongsTo($workspace)
-                ->where(function ($query) use ($project, $taskIds): void {
-                    $query->where(function ($projectQuery) use ($project): void {
-                        $projectQuery->where('subject_type', $project->getMorphClass())->where('subject_id', $project->getKey());
-                    })->orWhere(function ($taskQuery) use ($taskIds): void {
-                        $taskQuery->where('subject_type', (new Task)->getMorphClass())->whereIn('subject_id', $taskIds);
-                    });
-                })
+            'activities' => $this->projectActivityQuery($workspace, $project)
                 ->with(['actor:id,name', 'subject'])
                 ->latest('created_at')
                 ->get()
@@ -144,7 +121,7 @@ class ProjectController extends Controller
                     'id' => $activity->id,
                     'action' => $activity->action,
                     'created_at' => $activity->created_at->toIso8601String(),
-                    'actor' => $activity->actor?->only(['id', 'name']),
+                    'actor' => $activity->actor?->only(['id', 'name', 'avatar']),
                     'entity' => $activity->entityData($workspace),
                 ])
                 ->values(),
@@ -171,9 +148,104 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function dashboard(Workspace $workspace, Project $project): RedirectResponse
+    public function dashboard(Workspace $workspace, Project $project): Response
     {
-        return to_route('workspaces.projects.show', [$workspace, $project]);
+        Gate::authorize('view', $project);
+        $project->load('unit');
+
+        $activeStatuses = [
+            TaskStatus::Backlog->value,
+            TaskStatus::Todo->value,
+            TaskStatus::InProgress->value,
+            TaskStatus::Review->value,
+            TaskStatus::Blocked->value,
+        ];
+        $statusCounts = $project->tasks()->selectRaw('status, COUNT(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status');
+        $total = (int) $statusCounts->sum();
+        $done = (int) ($statusCounts[TaskStatus::Done->value] ?? 0);
+        $today = CarbonImmutable::today();
+        $overdue = $project->tasks()->whereIn('status', $activeStatuses)->whereNotNull('due_date')->whereDate('due_date', '<', $today)->count();
+        $blocked = (int) ($statusCounts[TaskStatus::Blocked->value] ?? 0);
+        $withoutAssignee = $project->tasks()->whereIn('status', $activeStatuses)->whereNull('assignee_id')->count();
+        $withoutDeadline = $project->tasks()->whereIn('status', $activeStatuses)->whereNull('due_date')->count();
+        $health = $overdue > 0 || $blocked > 0 ? 'off_track' : ($withoutAssignee > 0 || $withoutDeadline > 0 ? 'at_risk' : 'on_track');
+
+        return Inertia::render('projects/Dashboard', [
+            'workspace' => $workspace->only(['id', 'name']),
+            'project' => [
+                ...$this->projectSummary($project),
+                'archived_at' => $project->archived_at?->toIso8601String(),
+            ],
+            'stats' => [
+                'total' => $total,
+                'done' => $done,
+                'progress' => $total === 0 ? 0 : (int) round(($done / $total) * 100),
+                'overdue' => $overdue,
+                'blocked' => $blocked,
+                'without_assignee' => $withoutAssignee,
+                'without_deadline' => $withoutDeadline,
+                'status_counts' => collect(TaskStatus::cases())->map(fn (TaskStatus $status): array => [
+                    'value' => $status->value,
+                    'label' => $status->label(),
+                    'count' => (int) ($statusCounts[$status->value] ?? 0),
+                ])->values(),
+            ],
+            'health' => $health,
+            'next_milestone' => $project->milestones()
+                ->whereDate('target_date', '>=', $today)
+                ->withCount(['tasks', 'tasks as completed_tasks_count' => fn ($query) => $query->where('status', TaskStatus::Done->value)])
+                ->orderBy('target_date')
+                ->orderBy('name')
+                ->first()
+                ?->only(['id', 'name', 'target_date', 'tasks_count', 'completed_tasks_count']),
+            'next_tasks' => $project->tasks()
+                ->with('assignee:id,name,avatar')
+                ->whereIn('status', $activeStatuses)
+                ->orderByRaw('due_date IS NULL')
+                ->orderBy('due_date')
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get(['id', 'identifier', 'title', 'status', 'due_date', 'assignee_id'])
+                ->map(fn ($task): array => [
+                    'id' => $task->id,
+                    'identifier' => $task->identifier,
+                    'title' => $task->title,
+                    'status' => $task->status->value,
+                    'status_label' => $task->status->label(),
+                    'due_date' => $task->due_date?->format('Y-m-d'),
+                    'assignee' => $task->assignee?->only(['id', 'name', 'avatar']),
+                ])
+                ->values(),
+            'activities' => $this->projectActivityQuery($workspace, $project)
+                ->with(['actor:id,name', 'subject'])
+                ->latest('created_at')
+                ->limit(8)
+                ->get()
+                ->map(fn ($activity): array => [
+                    'id' => $activity->id,
+                    'action' => $activity->action,
+                    'description' => $activity->description,
+                    'created_at' => $activity->created_at->toIso8601String(),
+                    'actor' => $activity->actor?->only(['id', 'name', 'avatar']),
+                    'entity' => $activity->entityData($workspace),
+                ])
+                ->values(),
+        ]);
+    }
+
+    private function projectActivityQuery(Workspace $workspace, Project $project): Builder
+    {
+        $taskIds = $project->tasks()->select('id');
+
+        return ActivityLog::query()
+            ->whereBelongsTo($workspace)
+            ->where(function ($query) use ($project, $taskIds): void {
+                $query->where(function ($projectQuery) use ($project): void {
+                    $projectQuery->where('subject_type', $project->getMorphClass())->where('subject_id', $project->getKey());
+                })->orWhere(function ($taskQuery) use ($taskIds): void {
+                    $taskQuery->where('subject_type', (new Task)->getMorphClass())->whereIn('subject_id', $taskIds);
+                });
+            });
     }
 
     /** @return array<string, mixed> */
@@ -182,13 +254,14 @@ class ProjectController extends Controller
         return [
             'id' => $project->id,
             'name' => $project->name,
+            'icon' => $project->icon,
             'identifier' => $project->identifier,
             'unit' => $project->unit?->only(['id', 'name']),
-            'project_lead' => $project->projectLead?->only(['id', 'name']),
+            'project_lead' => $project->projectLead?->only(['id', 'name', 'avatar']),
             'visibility' => ProjectVisibility::from((string) $project->getRawOriginal('visibility'))->value,
             'visibility_label' => ProjectVisibility::from((string) $project->getRawOriginal('visibility'))->label(),
-            'status' => ProjectStatus::from((string) $project->getRawOriginal('status'))->value,
-            'status_label' => ProjectStatus::from((string) $project->getRawOriginal('status'))->label(),
+            'status' => $project->isArchived() ? 'archived' : ProjectStatus::from((string) $project->getRawOriginal('status'))->value,
+            'status_label' => $project->isArchived() ? 'Diarsipkan' : ProjectStatus::from((string) $project->getRawOriginal('status'))->label(),
             'start_date' => $project->start_date ? CarbonImmutable::parse((string) $project->getRawOriginal('start_date'))->toDateString() : null,
             'target_date' => $project->target_date ? CarbonImmutable::parse((string) $project->getRawOriginal('target_date'))->toDateString() : null,
             'archived' => $project->isArchived(),

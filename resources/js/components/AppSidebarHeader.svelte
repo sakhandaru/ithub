@@ -2,15 +2,25 @@
     import { Link, page } from '@inertiajs/svelte';
     import { onMount } from 'svelte';
     import Search from 'carbon-icons-svelte/lib/Search.svelte';
+    import ArrowLeft from 'carbon-icons-svelte/lib/ArrowLeft.svelte';
+    import ArrowRight from 'carbon-icons-svelte/lib/ArrowRight.svelte';
     import Bell from 'carbon-icons-svelte/lib/Notification.svelte';
     import ChevronRight from 'carbon-icons-svelte/lib/ChevronRight.svelte';
+    import Moon from 'carbon-icons-svelte/lib/Moon.svelte';
+    import Renew from 'carbon-icons-svelte/lib/Renew.svelte';
+    import Sun from 'carbon-icons-svelte/lib/Sun.svelte';
+    import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
+    import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
     import CommandPalette from '@/components/CommandPalette.svelte';
+    import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
     import { formatDate } from '@/lib/format-date';
     import AppLogo from '@/components/AppLogo.svelte';
-    import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.svelte';
-    import { dashboard, search } from '@/routes';
+    import { dashboard, logout } from '@/routes';
+    import { edit as editProfile } from '@/routes/profile';
     import { index as notificationsIndex } from '@/routes/notifications';
     import { toUrl } from '@/lib/utils';
+    import { themeState } from '@/lib/theme.svelte';
+    import { getInitials } from '@/lib/initials';
     import type { BreadcrumbItem } from '@/types';
 
     let {
@@ -20,20 +30,46 @@
     } = $props();
 
     const area = $derived(page.url.startsWith('/settings') ? 'Pengaturan' : 'Pekerjaan');
+    const auth = $derived(page.props.auth);
+    const activeUnitRole = $derived(page.props.unitContext?.active?.role_label);
     const unreadCount = $derived(page.props.notifications?.unread_count ?? 0);
     const notificationItems = $derived(page.props.notifications?.items ?? []);
     const workspaceTimezone = $derived(page.props.unitContext?.active ? page.props.workspaceContext?.active?.timezone : undefined);
     let notificationOpen = $state(false);
+    let profileMenuOpen = $state(false);
+    let searchOpen = $state(false);
+    const theme = themeState();
+    const isDark = $derived(theme.resolvedAppearance() === 'dark');
+
+    function navigateBack(): void {
+        window.history.back();
+    }
+
+    function navigateForward(): void {
+        window.history.forward();
+    }
+
+    function hardRefresh(): void {
+        window.location.reload();
+    }
+
+    function toggleTheme(): void {
+        theme.updateAppearance(isDark ? 'light' : 'dark');
+    }
 
     onMount(() => {
         const closeOnOutsideClick = (event: MouseEvent): void => {
             if (!(event.target instanceof Element) || !event.target.closest('[data-notification-popover]')) {
                 notificationOpen = false;
             }
+            if (!(event.target instanceof Element) || !event.target.closest('[data-profile-menu]')) {
+                profileMenuOpen = false;
+            }
         };
         const closeOnEscape = (event: KeyboardEvent): void => {
             if (event.key === 'Escape') {
                 notificationOpen = false;
+                profileMenuOpen = false;
             }
         };
 
@@ -47,50 +83,41 @@
     });
 </script>
 
-<header
-    class="relative flex h-11 shrink-0 items-center gap-2.5 bg-muted px-2 sm:px-3"
->
-    <div class="flex min-w-0 items-center gap-2">
-        <Link href={toUrl(dashboard())} class="hidden shrink-0 items-center rounded-md py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex" aria-label="Beranda ithub">
+<header class="relative flex h-10 shrink-0 items-center gap-2 bg-muted px-3 sm:gap-3 sm:px-4">
+    <div class="flex min-w-0 items-center gap-2 sm:gap-2.5">
+        <Link href={toUrl(dashboard())} class="hidden shrink-0 items-center rounded-md py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:ml-9 sm:flex" aria-label="Beranda ithub">
             <AppLogo />
         </Link>
-        <div class="min-w-0 max-w-48 flex-1 sm:flex-none">
-            <WorkspaceSwitcher />
-        </div>
         <span class="text-sm font-medium sm:hidden">{area}</span>
     </div>
-    <Link
-        href={toUrl(search())}
-        class="absolute left-1/2 hidden h-8 w-[min(32rem,42vw)] -translate-x-1/2 items-center gap-2 rounded-md border border-border/80 bg-background/70 px-3 text-sm text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
-        aria-current={page.url.startsWith('/search') ? 'page' : undefined}
-        aria-label="Cari"
-    >
-        <Search class="size-4 shrink-0" aria-hidden="true" />
-        <span class="flex-1">Cari</span>
-        <kbd class="rounded border border-border px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">⌘K</kbd>
-    </Link>
+    <div class="hidden min-w-0 flex-1 items-center justify-center gap-2 sm:flex">
+        <div class="flex h-8 shrink-0 items-center gap-0.5 rounded-md border border-border/70 bg-background/80 p-0.5">
+            <button type="button" class="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Kembali" title="Kembali" onclick={navigateBack}><ArrowLeft class="size-3.5" aria-hidden="true" /></button>
+            <button type="button" class="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Maju" title="Maju" onclick={navigateForward}><ArrowRight class="size-3.5" aria-hidden="true" /></button>
+        </div>
+        <button type="button" class="h-8 w-[min(30rem,38vw)] shrink rounded-md border border-border/70 bg-background/80 px-3 text-left text-sm text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Cari" onclick={() => { searchOpen = true; }}>
+            <span class="flex h-full items-center gap-2"><Search class="size-4 shrink-0" aria-hidden="true" /><span class="flex-1">Cari</span><kbd class="rounded border border-border px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">⌘K</kbd></span>
+        </button>
+        <div class="flex h-8 shrink-0 items-center gap-0.5 rounded-md border border-border/70 bg-background/80 p-0.5">
+            <button type="button" class="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Muat ulang halaman" title="Muat ulang halaman" onclick={hardRefresh}><Renew class="size-3.5" aria-hidden="true" /></button>
+            <button type="button" class="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={isDark ? 'Gunakan mode terang' : 'Gunakan mode gelap'} title={isDark ? 'Mode terang' : 'Mode gelap'} onclick={toggleTheme}>{#if isDark}<Sun class="size-3.5" aria-hidden="true" />{:else}<Moon class="size-3.5" aria-hidden="true" />{/if}</button>
+        </div>
+    </div>
     <nav class="ml-auto flex items-center gap-1" aria-label="Akses cepat">
-        <Link
-            href={toUrl(search())}
-            class="inline-flex min-h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:hidden sm:px-2.5"
-            aria-current={page.url.startsWith('/search') ? 'page' : undefined}
-            aria-label="Cari"
-        >
+        <button type="button" class="inline-flex min-h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:hidden sm:px-2.5" aria-label="Cari" onclick={() => { searchOpen = true; }}>
             <Search class="size-4" aria-hidden="true" />
-            <span class="hidden sm:inline">Cari</span>
-            <kbd class="hidden rounded border border-border px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground sm:inline">⌘K</kbd>
-        </Link>
+        </button>
         <div class="relative" data-notification-popover>
             <button
                 type="button"
-                class="relative inline-flex min-h-8 items-center justify-center rounded-md px-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2.5 {notificationOpen ? 'bg-muted text-foreground' : ''}"
+                class="relative inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {notificationOpen ? 'bg-muted text-foreground' : ''}"
                 aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : 'Notifikasi'}
                 aria-expanded={notificationOpen}
                 aria-controls="notification-popover"
                 aria-haspopup="dialog"
                 onclick={() => { notificationOpen = !notificationOpen; }}
             >
-                <Bell class="size-5" aria-hidden="true" />
+                <Bell class="size-4.5" aria-hidden="true" />
                 {#if unreadCount > 0}<span class="absolute right-0.5 top-0.5 inline-flex min-w-4 translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-4 text-white ring-2 ring-background">{unreadCount > 99 ? '99+' : unreadCount}</span>{/if}
             </button>
             {#if notificationOpen}
@@ -125,6 +152,49 @@
                 </div>
             {/if}
         </div>
+        <div class="relative" data-profile-menu>
+            <button
+                type="button"
+                class="relative inline-flex size-7 items-center justify-center rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Menu akun"
+                aria-expanded={profileMenuOpen}
+                aria-controls="profile-menu"
+                onclick={() => { profileMenuOpen = !profileMenuOpen; notificationOpen = false; }}
+            >
+                <Avatar class="size-6 overflow-hidden rounded-full">
+                    {#if auth.user?.avatar}
+                        <AvatarImage src={auth.user.avatar} alt={auth.user.name} />
+                    {/if}
+                    <AvatarFallback class="rounded-full bg-neutral-200 text-xs font-semibold text-black dark:bg-neutral-700 dark:text-white">
+                        {getInitials(auth.user?.name ?? '')}
+                    </AvatarFallback>
+                </Avatar>
+            </button>
+            {#if profileMenuOpen && auth.user}
+                <div id="profile-menu" role="menu" aria-label="Menu akun" class="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-56 overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+                    <div class="flex items-center gap-2 px-3 py-2.5">
+                        <Avatar class="size-8 overflow-hidden rounded-full">
+                            {#if auth.user.avatar}<AvatarImage src={auth.user.avatar} alt={auth.user.name} />{/if}
+                            <AvatarFallback class="rounded-full bg-neutral-200 text-xs font-semibold text-black dark:bg-neutral-700 dark:text-white">{getInitials(auth.user.name)}</AvatarFallback>
+                        </Avatar>
+                        <div class="min-w-0 text-left">
+                            <p class="truncate text-sm font-medium">{auth.user.name}</p>
+                            <p class="truncate text-xs text-muted-foreground">{auth.user.email}</p>
+                            {#if activeUnitRole}<p class="truncate text-xs text-muted-foreground">{activeUnitRole}</p>{/if}
+                        </div>
+                    </div>
+                    <div class="my-1 h-px bg-border"></div>
+                    <Link href={toUrl(editProfile())} prefetch class="flex min-h-9 items-center gap-2 rounded-md px-3 text-sm hover:bg-muted focus-visible:bg-muted" role="menuitem" onclick={() => { profileMenuOpen = false; }}>
+                        <UserAvatar class="size-4" aria-hidden="true" />
+                        Profil
+                    </Link>
+                    <Link href={logout()} as="button" class="flex min-h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted focus-visible:bg-muted" role="menuitem" onclick={() => { profileMenuOpen = false; }}>
+                        <Logout class="size-4" aria-hidden="true" />
+                        Keluar
+                    </Link>
+                </div>
+            {/if}
+        </div>
     </nav>
 </header>
-<CommandPalette />
+<CommandPalette bind:open={searchOpen} />

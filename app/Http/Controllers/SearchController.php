@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Task;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Inertia\Response;
 
 class SearchController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request): Response|JsonResponse|RedirectResponse
     {
         $user = $request->user();
         $workspace = $user->activeWorkspace;
@@ -22,6 +23,16 @@ class SearchController extends Controller
             $tasks = Task::query()->whereHas('project', fn ($builder) => $builder->whereBelongsTo($workspace)->visibleTo($user)->whereNull('archived_at'))->with('project:id,name,identifier')->where(fn ($builder) => $builder->where('identifier', 'like', "%{$query}%")->orWhere('title', 'like', "%{$query}%")->orWhere('description', 'like', "%{$query}%"))->limit(20)->get(['id', 'project_id', 'identifier', 'title', 'status']);
         }
 
-        return Inertia::render('Search', ['workspace' => $workspace?->only(['id', 'name']), 'query' => $query, 'projects' => $projects, 'tasks' => $tasks->map(fn (Task $task): array => ['id' => $task->id, 'identifier' => $task->identifier, 'title' => $task->title, 'project' => $task->project?->only(['id', 'name', 'identifier']), 'status' => (string) $task->getRawOriginal('status')])->values()]);
+        $taskResults = $tasks->map(fn (Task $task): array => ['id' => $task->id, 'identifier' => $task->identifier, 'title' => $task->title, 'project' => $task->project?->only(['id', 'name', 'identifier']), 'status' => (string) $task->getRawOriginal('status')])->values();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'workspace' => $workspace?->only(['id', 'name']),
+                'projects' => $projects->values(),
+                'tasks' => $taskResults,
+            ]);
+        }
+
+        return redirect()->route('dashboard');
     }
 }

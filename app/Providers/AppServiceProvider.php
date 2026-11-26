@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Attachment;
 use App\Models\Comment;
 use App\Models\Milestone;
+use App\Models\Module;
 use App\Models\Project;
 use App\Models\SavedView;
 use App\Models\Task;
@@ -88,6 +89,13 @@ class AppServiceProvider extends ServiceProvider
             abort_unless($project instanceof Project, 404);
 
             return $project->milestones()->findOrFail($value);
+        });
+
+        Route::bind('module', function (string $value): Module {
+            $project = request()->route('project');
+            abort_unless($project instanceof Project, 404);
+
+            return $project->modules()->findOrFail($value);
         });
 
         Route::bind('relation', function (string $value): TaskRelation {

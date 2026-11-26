@@ -14,6 +14,7 @@ test('workspace administrators can create and view a project', function () {
 
     $response = $this->actingAs($owner)->post(route('workspaces.projects.store', $workspace), [
         'name' => 'Portal Internal',
+        'icon' => '🌐',
         'identifier' => 'PORTAL',
         'unit_id' => $unit->id,
         'visibility' => ProjectVisibility::Unit->value,
@@ -25,7 +26,7 @@ test('workspace administrators can create and view a project', function () {
     $response->assertRedirect(route('workspaces.projects.index', $workspace));
     $this->actingAs($owner)
         ->get(route('workspaces.projects.show', [$workspace, $project]))
-        ->assertOk();
+        ->assertRedirect(route('workspaces.projects.dashboard', [$workspace, $project]));
 });
 
 test('the project create route opens the create modal on the project index', function () {
@@ -68,7 +69,7 @@ test('unit visibility is limited to members of the project unit', function () {
         'visibility' => ProjectVisibility::Unit,
     ]);
 
-    $this->actingAs($unitMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertOk();
+    $this->actingAs($unitMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertRedirect(route('workspaces.projects.dashboard', [$workspace, $project]));
     $this->actingAs($otherMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertNotFound();
 });
 
@@ -86,10 +87,10 @@ test('project members can view a unit project even when they belong to another u
     ]);
     $project->memberships()->create(['user_id' => $projectMember->id, 'role' => 'contributor', 'joined_at' => now()]);
 
-    $this->actingAs($projectMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertOk();
+    $this->actingAs($projectMember)->get(route('workspaces.projects.show', [$workspace, $project]))->assertRedirect(route('workspaces.projects.dashboard', [$workspace, $project]));
 });
 
-test('project detail and legacy dashboard route are available', function () {
+test('project overview redirects to the project dashboard', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
     $project = app(CreateProject::class)->handle($owner, $workspace, [
@@ -103,14 +104,12 @@ test('project detail and legacy dashboard route are available', function () {
 
     $this->actingAs($owner)
         ->get(route('workspaces.projects.show', [$workspace, $project]))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('projects/Show')
-            ->missing('stats'));
+        ->assertRedirect(route('workspaces.projects.dashboard', [$workspace, $project]));
 
     $this->actingAs($owner)
         ->get(route('workspaces.projects.dashboard', [$workspace, $project]))
-        ->assertRedirect(route('workspaces.projects.show', [$workspace, $project]));
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('projects/Dashboard')->has('stats'));
 });
 
 test('project cycles and modules pages require project visibility', function () {

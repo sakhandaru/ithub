@@ -44,6 +44,48 @@ test('a contributor can create and transition a task through project routes', fu
     expect($task->fresh()->status->value)->toBe('todo');
 });
 
+test('tasks can be assigned to and filtered by a project release', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $release = $project->releases()->create(['name' => 'Rilis 1.0', 'status' => 'planned']);
+    $otherRelease = $project->releases()->create(['name' => 'Rilis 2.0', 'status' => 'draft']);
+    $task = app(CreateTask::class)->handle($owner, $project, ['title' => 'Task rilis', 'release_id' => $release->id]);
+    app(CreateTask::class)->handle($owner, $project, ['title' => 'Task lain', 'release_id' => $otherRelease->id]);
+
+    $this->actingAs($owner)
+        ->get(route('workspaces.projects.tasks.index', [$workspace, $project]).'?release='.$release->id)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tasks/Index')
+            ->has('tasks', 1)
+            ->where('tasks.0.id', $task->id)
+            ->where('filters.release', $release->id));
+});
+
+test('a task cannot be assigned to a release from another project', function () {
+    $owner = User::factory()->create();
+    $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
+    $project = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Portal Internal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $otherProject = app(CreateProject::class)->handle($owner, $workspace, [
+        'name' => 'Infra Internal', 'identifier' => 'INFRA', 'unit_id' => $workspace->units->first()->id,
+        'visibility' => 'workspace', 'status' => 'active',
+    ]);
+    $release = $otherProject->releases()->create(['name' => 'Rilis lain', 'status' => 'draft']);
+
+    $this->actingAs($owner)
+        ->post(route('workspaces.projects.tasks.store', [$workspace, $project]), ['title' => 'Task invalid', 'release_id' => $release->id])
+        ->assertSessionHasErrors('release_id');
+
+    expect(Task::query()->where('title', 'Task invalid')->exists())->toBeFalse();
+});
+
 test('task route does not expose a task from another project', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
@@ -116,6 +158,8 @@ test('task list filters by search and exposes a selected side peek task', functi
             ->component('tasks/Index')
             ->has('tasks', 1)
             ->where('selectedTask.id', $task->id)
+            ->where('taskDetail.task.id', $task->id)
+            ->where('taskDetail.task.title', 'Monitoring produksi')
             ->where('filters.search', 'monitoring'));
 });
 
@@ -268,7 +312,7 @@ test('task list ignores unavailable saved view filters with feedback', function 
             ->where('savedViewWarnings.0', 'status'));
 });
 
-test('task detail page loads the same task context', function () {
+test('task detail route opens the task side peek', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
     $project = app(CreateProject::class)->handle($owner, $workspace, [
@@ -282,12 +326,11 @@ test('task detail page loads the same task context', function () {
 
     $this->actingAs($owner)
         ->get(route('workspaces.projects.tasks.show', [$workspace, $project, $task]))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('tasks/Show')
-            ->where('task.id', $task->id)
-            ->where('task.title', 'Task detail')
-            ->where('transitionStatuses.0.value', 'todo'));
+        ->assertRedirect(route('workspaces.projects.tasks.index', [
+            'workspace' => $workspace,
+            'project' => $project,
+            'task' => $task->id,
+        ]));
 });
 
 test('board groups tasks by workflow status', function () {

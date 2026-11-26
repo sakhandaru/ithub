@@ -17,6 +17,7 @@ export type WorkspaceMember = {
         id: number;
         name: string;
         email: string;
+        avatar?: string | null;
     };
     role: string;
     role_label: string;

@@ -22,12 +22,12 @@ test('project admins can update project settings', function () {
             'name' => 'Updated Portal',
             'unit_id' => $workspace->units->first()->id,
             'visibility' => 'workspace',
-            'status' => ProjectStatus::Planned->value,
+            'status' => ProjectStatus::Active->value,
             'project_lead_id' => $owner->id,
         ])
         ->assertRedirect();
 
-    $this->assertDatabaseHas('projects', ['id' => $project->id, 'name' => 'Updated Portal', 'status' => 'planned']);
+    $this->assertDatabaseHas('projects', ['id' => $project->id, 'name' => 'Updated Portal', 'status' => 'active']);
 });
 
 test('contributors cannot update project settings or manage members', function () {

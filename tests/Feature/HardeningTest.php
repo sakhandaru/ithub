@@ -10,11 +10,11 @@ use App\Models\User;
 test('archived projects remain readable but all task mutation routes are read-only', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
-    $project = app(CreateProject::class)->handle($owner, $workspace, ['name' => 'Portal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id, 'visibility' => 'workspace', 'status' => 'completed']);
+    $project = app(CreateProject::class)->handle($owner, $workspace, ['name' => 'Portal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id, 'visibility' => 'workspace', 'status' => 'active']);
     $task = app(CreateTask::class)->handle($owner, $project, ['title' => 'Existing task']);
     app(ArchiveProject::class)->handle($owner, $project->fresh());
 
-    $this->actingAs($owner)->get(route('workspaces.projects.tasks.show', [$workspace, $project, $task]))->assertOk();
+    $this->actingAs($owner)->get(route('workspaces.projects.tasks.show', [$workspace, $project, $task]))->assertRedirect();
     $this->actingAs($owner)->patch(route('workspaces.projects.tasks.update', [$workspace, $project, $task]), ['title' => 'Tidak boleh'])->assertForbidden();
     $this->actingAs($owner)->post(route('workspaces.projects.tasks.store', [$workspace, $project]), ['title' => 'Tidak boleh'])->assertForbidden();
 });
@@ -22,7 +22,7 @@ test('archived projects remain readable but all task mutation routes are read-on
 test('restoring a project returns mutation access', function () {
     $owner = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($owner, 'Engineering', 'Asia/Jakarta');
-    $project = app(CreateProject::class)->handle($owner, $workspace, ['name' => 'Portal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id, 'visibility' => 'workspace', 'status' => 'completed']);
+    $project = app(CreateProject::class)->handle($owner, $workspace, ['name' => 'Portal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id, 'visibility' => 'workspace', 'status' => 'active']);
     app(ArchiveProject::class)->handle($owner, $project->fresh());
     app(RestoreProject::class)->handle($owner, $project->fresh());
 

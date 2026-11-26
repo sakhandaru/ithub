@@ -64,7 +64,7 @@ test('task transitions enforce workflow reasons and completion evidence', functi
 
     app(TransitionTask::class)->handle($owner, $task->fresh(), TaskStatus::Blocked, 'Menunggu akses firewall');
     app(TransitionTask::class)->handle($owner, $task->fresh(), TaskStatus::InProgress, 'Akses sudah tersedia');
-    app(TransitionTask::class)->handle($owner, $task->fresh(), TaskStatus::InReview);
+    app(TransitionTask::class)->handle($owner, $task->fresh(), TaskStatus::Review);
 
     expect(fn () => app(TransitionTask::class)->handle($owner, $task->fresh(), TaskStatus::Done))
         ->toThrow(ValidationException::class);

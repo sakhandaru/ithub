@@ -35,6 +35,7 @@ class StoreProjectRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:120'],
+            'icon' => ['required', 'string', 'max:16', 'regex:/^\X$/u'],
             'identifier' => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', Rule::unique('projects')->where('workspace_id', $workspace instanceof Workspace ? $workspace->getKey() : null)],
             'unit_id' => ['required', 'string', Rule::exists('units', 'id')],
             'description' => ['nullable', 'string', 'max:10000'],
@@ -60,6 +61,11 @@ class StoreProjectRequest extends FormRequest
                 return;
             }
 
+            $icon = (string) $this->input('icon');
+            if (preg_match('/[\p{Extended_Pictographic}\p{Regional_Indicator}]/u', $icon) !== 1) {
+                $validator->errors()->add('icon', 'Ikon Project harus berupa emoji.');
+            }
+
             $workspace = $this->route('workspace');
             $userIds = array_filter([(int) $this->input('project_lead_id'), (int) $this->input('default_assignee_id')]);
 
@@ -80,6 +86,8 @@ class StoreProjectRequest extends FormRequest
     {
         return [
             'name.required' => 'Nama Project wajib diisi.',
+            'icon.required' => 'Ikon Project wajib dipilih.',
+            'icon.regex' => 'Pilih satu emoji untuk ikon Project.',
             'identifier.required' => 'Project ID wajib diisi.',
             'identifier.regex' => 'Project ID hanya boleh berisi huruf kapital dan angka.',
             'identifier.unique' => 'Project ID sudah digunakan di Workspace ini.',

@@ -31,6 +31,7 @@ final class CreateProject
             $project = $workspace->projects()->create([
                 'unit_id' => $unit->getKey(),
                 'name' => (string) $attributes['name'],
+                'icon' => (string) ($attributes['icon'] ?? '📁'),
                 'identifier' => strtoupper((string) $attributes['identifier']),
                 'description' => $attributes['description'] ?? null,
                 'visibility' => $attributes['visibility'] ?? ProjectVisibility::Unit,

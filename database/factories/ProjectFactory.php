@@ -26,6 +26,7 @@ class ProjectFactory extends Factory
             'workspace_id' => Workspace::factory(),
             'unit_id' => Unit::factory(),
             'name' => fake()->sentence(3),
+            'icon' => '📁',
             'identifier' => strtoupper(fake()->unique()->lexify('???')),
             'description' => fake()->optional()->sentence(),
             'visibility' => ProjectVisibility::Unit,
@@ -43,7 +44,7 @@ class ProjectFactory extends Factory
     public function archived(): static
     {
         return $this->state(fn (): array => [
-            'status' => ProjectStatus::Completed,
+            'status' => ProjectStatus::Active,
             'archived_at' => now(),
         ]);
     }

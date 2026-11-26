@@ -26,6 +26,7 @@ final class StoreAttachment
             return DB::transaction(function () use ($actor, $task, $file, $disk, $path): Attachment {
                 Storage::disk($disk)->putFileAs('tasks/'.$task->id, $file, basename($path));
                 $attachment = $task->attachments()->create([
+                    'project_id' => $task->project_id,
                     'uploaded_by_id' => $actor->getKey(),
                     'disk' => $disk,
                     'path' => 'tasks/'.$task->id.'/'.basename($path),

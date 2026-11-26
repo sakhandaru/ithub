@@ -47,6 +47,10 @@ class StoreWorkspaceMemberRequest extends FormRequest
             $workspace = $this->route('workspace');
             $member = User::query()->where('email', $this->string('email')->toString())->first();
 
+            if ($this->string('role')->toString() === SystemRole::Admin->value && ! $this->user()?->isAdmin()) {
+                $validator->errors()->add('role', 'Hanya Admin sistem yang dapat memberikan role Admin.');
+            }
+
             if ($workspace instanceof Workspace && $member && $workspace->memberships()->whereBelongsTo($member)->exists()) {
                 $validator->errors()->add('email', 'User tersebut sudah menjadi anggota Workspace.');
             }

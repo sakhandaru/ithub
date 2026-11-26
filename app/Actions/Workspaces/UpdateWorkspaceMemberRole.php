@@ -16,6 +16,10 @@ final class UpdateWorkspaceMemberRole
 
     public function handle(User $actor, WorkspaceMembership $membership, SystemRole $role): WorkspaceMembership
     {
+        if ($role === SystemRole::Admin && ! $actor->isAdmin()) {
+            throw ValidationException::withMessages(['role' => 'Hanya Admin sistem yang dapat memberikan role Admin.']);
+        }
+
         return DB::transaction(function () use ($actor, $membership, $role): WorkspaceMembership {
             $workspace = $membership->workspace;
             $membershipRole = WorkspaceRole::from((string) $membership->getRawOriginal('role'));

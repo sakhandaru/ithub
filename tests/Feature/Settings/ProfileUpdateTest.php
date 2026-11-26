@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -54,6 +56,26 @@ test('email is stored in lowercase so the user can still log in', function () {
     ]);
 
     $this->assertAuthenticatedAs($user);
+});
+
+test('profile avatar can be uploaded', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'avatar' => UploadedFile::fake()->image('avatar.png'),
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    $avatar = $user->refresh()->avatar;
+
+    expect($avatar)->toContain('/storage/avatars/');
+    Storage::disk('public')->assertExists(str_replace('/storage/', '', parse_url($avatar, PHP_URL_PATH)));
 });
 
 test('email must be unique regardless of case', function () {

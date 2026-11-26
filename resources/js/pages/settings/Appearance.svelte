@@ -21,7 +21,7 @@
 
 <h1 class="sr-only">Pengaturan tampilan</h1>
 
-<section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5" aria-label="Tampilan">
+<section class="rounded-lg border border-border/70 bg-card p-4 sm:p-5" aria-label="Tampilan">
     <Heading
         variant="small"
         title="Tampilan"

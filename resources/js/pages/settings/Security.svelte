@@ -39,7 +39,7 @@
 
 <h1 class="sr-only">Pengaturan keamanan</h1>
 
-<section class="rounded-lg border border-border/80 bg-card p-4 sm:p-5" aria-label="Kata sandi">
+<section class="rounded-lg border border-border/70 bg-card p-4 sm:p-5" aria-label="Kata sandi">
     <Heading
         variant="small"
         title="Kata sandi"
@@ -48,7 +48,7 @@
 
     <Form
         {...SecurityController.update.form()}
-        class="space-y-6"
+        class="grid gap-4"
         options={{ preserveScroll: true }}
         resetOnSuccess
         resetOnError={['password', 'password_confirmation', 'current_password']}
@@ -92,7 +92,7 @@
                 <InputError message={errors.password_confirmation} />
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center justify-end border-t border-border/70 pt-4">
                 <Button
                     type="submit"
                     disabled={processing}

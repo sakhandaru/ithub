@@ -26,15 +26,22 @@
                 <DropdownMenuTrigger asChild>
                     {#snippet children(props)}
                         <SidebarMenuButton
+                            asChild
                             size="lg"
                             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                            data-test="sidebar-menu-button"
-                            onclick={props.onClick}
-                            aria-expanded={props['aria-expanded']}
-                            data-state={props['data-state']}
                         >
-                            <UserInfo {user} />
-                            <ChevronsUpDown class="ml-auto size-4" />
+                            {#snippet children(buttonProps)}
+                                <button
+                                    {...buttonProps}
+                                    {...props}
+                                    class={buttonProps.class}
+                                    type="button"
+                                    data-test="sidebar-menu-button"
+                                >
+                                    <UserInfo {user} />
+                                    <ChevronsUpDown class="ml-auto size-4" />
+                                </button>
+                            {/snippet}
                         </SidebarMenuButton>
                     {/snippet}
                 </DropdownMenuTrigger>

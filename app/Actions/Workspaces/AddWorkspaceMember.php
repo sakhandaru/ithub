@@ -17,6 +17,10 @@ final class AddWorkspaceMember
 
     public function handle(User $actor, Workspace $workspace, User $member, SystemRole $role): WorkspaceMembership
     {
+        if ($role === SystemRole::Admin && ! $actor->isAdmin()) {
+            throw ValidationException::withMessages(['role' => 'Hanya Admin sistem yang dapat memberikan role Admin.']);
+        }
+
         return DB::transaction(function () use ($actor, $workspace, $member, $role): WorkspaceMembership {
             $legacyOwner = $workspace->memberships()
                 ->whereBelongsTo($actor)

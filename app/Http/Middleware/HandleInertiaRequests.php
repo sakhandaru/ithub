@@ -5,7 +5,9 @@ namespace App\Http\Middleware;
 use App\Enums\SystemRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Project;
+use App\Models\Unit;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,8 +47,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'workspaceContext' => fn (): array => $this->workspaceContext($request->user()),
-            'unitContext' => fn (): array => $this->unitContext($request->user()),
+            'workspaceContext' => fn (): array => $this->workspaceContext($request->user(), $request->route('workspace')),
+            'unitContext' => fn (): array => $this->unitContext($request->user(), $request->route('unit'), $request->route('project')),
             'projectContext' => fn (): array => $this->projectContext($request->route('project'), $request->user()),
             'notifications' => fn (): array => $request->user() ? [
                 'unread_count' => $request->user()->unreadNotifications()->count(),
@@ -70,7 +72,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /** @return array{active: array{id: string, name: string, timezone: string, role: string, can_manage: bool}|null, available: list<array{id: string, name: string, role: string}>} */
-    private function workspaceContext(?User $user): array
+    private function workspaceContext(?User $user, mixed $contextWorkspace = null): array
     {
         if (! $user) {
             return ['active' => null, 'available' => []];
@@ -82,7 +84,9 @@ class HandleInertiaRequests extends Middleware
             ->sortBy(fn ($membership) => $membership->workspace->name)
             ->values();
 
-        $activeMembership = $memberships->firstWhere('workspace_id', $user->active_workspace_id);
+        $activeMembership = $contextWorkspace instanceof Workspace
+            ? $memberships->firstWhere('workspace_id', $contextWorkspace->getKey())
+            : $memberships->firstWhere('workspace_id', $user->active_workspace_id);
         $activeRole = $activeMembership ? WorkspaceRole::from((string) $activeMembership->getRawOriginal('role')) : null;
 
         return [
@@ -102,15 +106,24 @@ class HandleInertiaRequests extends Middleware
     }
 
     /** @return array{active: array{id: string, workspace_id: string, name: string, role: string|null, role_label: string|null, can_manage: bool}|null, available: list<array{id: string, workspace_id: string, name: string}>} */
-    private function unitContext(?User $user): array
+    private function unitContext(?User $user, mixed $contextUnit = null, mixed $contextProject = null): array
     {
         if (! $user) {
             return ['active' => null, 'available' => []];
         }
 
         $memberships = $user->unitMemberships()->with('unit:id,name,workspace_id')->get()->sortBy(fn ($membership) => $membership->unit->name)->values();
-        $activeMembership = $memberships->firstWhere('unit_id', $user->active_unit_id);
+        $contextUnitId = $contextUnit instanceof Unit
+            ? $contextUnit->getKey()
+            : ($contextProject instanceof Project ? $contextProject->unit_id : $user->active_unit_id);
+        $activeMembership = $memberships->firstWhere('unit_id', $contextUnitId);
         $role = $user->system_role ?? SystemRole::User;
+        $workspaceMembership = $activeMembership
+            ? $activeMembership->unit->workspace->memberships()->whereBelongsTo($user)->first()
+            : null;
+        $workspaceRole = $workspaceMembership?->getRawOriginal('role');
+        $canManage = $user->isAdmin()
+            || ($workspaceRole && WorkspaceRole::from((string) $workspaceRole)->canManageUnits());
 
         return [
             'active' => $activeMembership ? [
@@ -119,7 +132,7 @@ class HandleInertiaRequests extends Middleware
                 'name' => $activeMembership->unit->name,
                 'role' => $role->value,
                 'role_label' => $role->label(),
-                'can_manage' => $user->isAdmin(),
+                'can_manage' => $canManage,
             ] : null,
             'available' => array_values($memberships->map(fn ($membership) => [
                 'id' => (string) $membership->unit->id,
@@ -129,24 +142,27 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
-    /** @return array{active: array{id: string, workspace_id: string, name: string, identifier: string, archived: bool}|null, available: list<array{id: string, workspace_id: string, name: string, identifier: string}>} */
+    /** @return array{active: array{id: string, workspace_id: string, name: string, icon: string, identifier: string, archived: bool}|null, available: list<array{id: string, workspace_id: string, name: string, icon: string, identifier: string}>} */
     private function projectContext(mixed $project, ?User $user): array
     {
         if (! $user) {
             return ['active' => null, 'available' => []];
         }
 
-        $activeUnit = $user->activeUnit;
+        $activeUnit = $project instanceof Project
+            ? $project->unit
+            : $user->activeUnit;
         $available = $activeUnit
             ? $activeUnit->projects()
                 ->visibleTo($user)
                 ->whereNull('archived_at')
                 ->orderBy('name')
-                ->get(['id', 'workspace_id', 'name', 'identifier'])
+                ->get(['id', 'workspace_id', 'name', 'icon', 'identifier'])
                 ->map(fn (Project $availableProject): array => [
                     'id' => (string) $availableProject->id,
                     'workspace_id' => (string) $availableProject->workspace_id,
                     'name' => $availableProject->name,
+                    'icon' => $availableProject->icon,
                     'identifier' => $availableProject->identifier,
                 ])
                 ->values()
@@ -157,11 +173,24 @@ class HandleInertiaRequests extends Middleware
             return ['active' => null, 'available' => $available];
         }
 
+        $currentProject = [
+            'id' => (string) $project->id,
+            'workspace_id' => (string) $project->workspace_id,
+            'name' => $project->name,
+            'icon' => $project->icon,
+            'identifier' => $project->identifier,
+        ];
+
+        if (! collect($available)->contains('id', $currentProject['id'])) {
+            $available[] = $currentProject;
+        }
+
         return [
             'active' => [
                 'id' => (string) $project->id,
                 'workspace_id' => (string) $project->workspace_id,
                 'name' => $project->name,
+                'icon' => $project->icon,
                 'identifier' => $project->identifier,
                 'archived' => $project->isArchived(),
             ],

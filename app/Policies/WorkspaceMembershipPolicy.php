@@ -47,7 +47,7 @@ class WorkspaceMembershipPolicy
             return true;
         }
 
-        return $actorRole === WorkspaceRole::WorkspaceAdmin
+        return $actorRole?->canManageMembers() === true
             && WorkspaceRole::from((string) $workspaceMembership->getRawOriginal('role')) !== WorkspaceRole::Owner;
     }
 

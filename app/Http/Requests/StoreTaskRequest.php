@@ -30,10 +30,9 @@ class StoreTaskRequest extends FormRequest
             'requester_id' => ['nullable', 'integer', 'exists:users,id'],
             'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
-            'label_ids' => ['sometimes', 'array'],
-            'label_ids.*' => ['ulid', 'exists:labels,id'],
-            'parent_task_id' => ['nullable', 'ulid', 'exists:tasks,id'],
             'milestone_id' => ['nullable', 'ulid', 'exists:milestones,id'],
+            'module_id' => ['nullable', 'ulid', 'exists:modules,id'],
+            'release_id' => ['nullable', 'ulid', 'exists:releases,id'],
         ];
     }
 
@@ -61,19 +60,19 @@ class StoreTaskRequest extends FormRequest
                 }
             }
 
-            $labelIds = $this->input('label_ids', []);
-            if ($labelIds !== [] && $project->labels()->whereIn('id', $labelIds)->count() !== count($labelIds)) {
-                $validator->errors()->add('label_ids', 'Label harus berasal dari Project yang sama.');
-            }
-
-            $parentId = $this->input('parent_task_id');
-            if ($parentId !== null && ! $project->tasks()->whereKey($parentId)->exists()) {
-                $validator->errors()->add('parent_task_id', 'Parent Task harus berasal dari Project yang sama.');
-            }
-
             $milestoneId = $this->input('milestone_id');
             if ($milestoneId !== null && ! $project->milestones()->whereKey($milestoneId)->exists()) {
                 $validator->errors()->add('milestone_id', 'Milestone harus berasal dari Project yang sama.');
+            }
+
+            $moduleId = $this->input('module_id');
+            if ($moduleId !== null && ! $project->modules()->whereKey($moduleId)->exists()) {
+                $validator->errors()->add('module_id', 'Modul harus berasal dari Project yang sama.');
+            }
+
+            $releaseId = $this->input('release_id');
+            if ($releaseId !== null && ! $project->releases()->whereKey($releaseId)->exists()) {
+                $validator->errors()->add('release_id', 'Rilis harus berasal dari Project yang sama.');
             }
 
             $startDate = $this->input('start_date');

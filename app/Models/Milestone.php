@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['project_id', 'name', 'target_date'])]
+#[Fillable(['project_id', 'release_id', 'name', 'target_date'])]
 class Milestone extends Model
 {
     /** @use HasFactory<MilestoneFactory> */
@@ -25,6 +25,12 @@ class Milestone extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /** @return BelongsTo<Release, $this> */
+    public function release(): BelongsTo
+    {
+        return $this->belongsTo(Release::class);
     }
 
     /** @return HasMany<Task, $this> */

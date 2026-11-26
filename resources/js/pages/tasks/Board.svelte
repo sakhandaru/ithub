@@ -19,7 +19,7 @@
     import AppHead from '@/components/AppHead.svelte';
     import ProjectContextNav from '@/components/ProjectContextNav.svelte';
     import PageHeader from '@/components/PageHeader.svelte';
-    import { taskBreadcrumbs } from '@/lib/page-header';
+    import { globalHeaderLabels, taskBreadcrumbs } from '@/lib/page-header';
     import { Button } from '@/components/ui/button';
     import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
     import { toUrl } from '@/lib/utils';
@@ -28,10 +28,11 @@
     type Workspace = { id: string; name: string };
     type Project = { id: string; name: string; identifier: string; archived_at: string | null };
     type Status = { value: string; label: string };
-    type Task = { id: string; identifier: string; title: string; status: string; status_label: string; priority_label: string | null; assignee: { id: number; name: string } | null; due_date: string | null; labels: Array<{ id: string; name: string }> };
+    type Task = { id: string; identifier: string; title: string; status: string; status_label: string; priority_label: string | null; assignee: { id: number; name: string } | null; due_date: string | null; milestone: { id: string; name: string; target_date: string | null } | null; module: { id: string; name: string; description: string | null } | null };
+    type Grouping = 'none' | 'assignee' | 'milestone';
 
     type Filters = { status: string; priority: string; assignee: string; requester: string; milestone: string; preset: string; no_deadline: boolean; no_evidence: boolean; search: string; sort: string; direction: string };
-    let { workspace, project, tasks, statuses, filters, allowedTransitions, embedded = false }: { workspace: Workspace; project: Project; tasks: Task[]; statuses: Status[]; filters: Filters; allowedTransitions: Record<string, string[]>; embedded?: boolean } = $props();
+    let { workspace, project, tasks, statuses, filters, allowedTransitions, grouping = 'none', embedded = false }: { workspace: Workspace; project: Project; tasks: Task[]; statuses: Status[]; filters: Filters; allowedTransitions: Record<string, string[]>; grouping?: Grouping; embedded?: boolean } = $props();
     let optimisticTasks = $state<Task[]>([]);
     let dragSnapshot = $state<Task[]>([]);
     let draggedTaskId = $state<string | null>(null);
@@ -91,6 +92,10 @@
         sort: filters.sort || undefined,
         direction: filters.direction || undefined,
     });
+
+    function taskDetailUrl(taskId: string): string {
+        return toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: { ...taskQuery(), view: 'board', task: taskId } }));
+    }
 
     function submitTransition(task: Task, target: string, reason: string, completionNote: string): void {
         const previous = optimisticTasks;
@@ -203,11 +208,11 @@
 
 <div class={embedded ? 'min-w-0' : 'flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8'}>
     {#if !embedded}
-        <PageHeader breadcrumbs={taskBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name, toUrl(ProjectController.show({ workspace: workspace.id, project: project.id })), toUrl(TaskController.index({ workspace: workspace.id, project: project.id })), tasks.length)} showSidebarTrigger>
+        <PageHeader breadcrumbs={taskBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name, toUrl(ProjectController.show({ workspace: workspace.id, project: project.id })), toUrl(TaskController.index({ workspace: workspace.id, project: project.id })), tasks.length, globalHeaderLabels.task, page.props.projectContext?.active?.icon)} showSidebarTrigger>
         {#snippet actions()}
             <ProjectContextNav {workspace} {project} active="board" taskQuery={taskQuery()} />
-            <Button type="button" variant="outline" size="sm" aria-pressed={compact} onclick={toggleCompact}><Rows3 class="size-4" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button>
-            <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex min-h-8 items-center rounded-md border px-2.5 text-xs hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link>
+            <Button type="button" variant="outline" class="h-7 gap-1.5 border-border/80 bg-background px-2.5 text-xs text-muted-foreground" aria-pressed={compact} onclick={toggleCompact}><Rows3 class="size-3.5" aria-hidden="true" />{compact ? 'Tampilan nyaman' : 'Tampilan ringkas'}</Button>
+            <Link href={toUrl(TaskController.index({ workspace: workspace.id, project: project.id }, { query: taskQuery() }))} class="inline-flex h-7 items-center rounded-md border border-border/80 bg-background px-2.5 text-xs text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">Buka List</Link>
         {/snippet}
     </PageHeader>
     {/if}
@@ -219,7 +224,7 @@
         <div class="min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-4" role="region" aria-label="Board Task">
             <div class="flex w-max min-w-full gap-2.5 snap-x snap-mandatory sm:gap-3 sm:snap-none">
                 {#each statuses as status (status.value)}
-                    <BoardColumn {workspace} {project} {status} tasks={tasksFor(status.value)} {statuses} {allowedTransitions} {compact} {busyTaskId} disabled={!!project.archived_at} {isOverdue} {statusVariant} onRequestTransition={requestTransition} />
+                    <BoardColumn {workspace} {project} {status} tasks={tasksFor(status.value)} {statuses} {allowedTransitions} {grouping} {compact} {busyTaskId} disabled={!!project.archived_at} {isOverdue} {statusVariant} {taskDetailUrl} onRequestTransition={requestTransition} />
                 {/each}
             </div>
         </div>

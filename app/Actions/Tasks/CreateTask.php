@@ -31,8 +31,6 @@ final class CreateTask
                 'created_by_id' => $creator->getKey(),
                 'assignee_id' => $attributes['assignee_id'] ?? $lockedProject->default_assignee_id,
             ]);
-            $task->labels()->sync($attributes['label_ids'] ?? []);
-
             $this->recordAuditLog->handle(
                 auditable: $task,
                 action: 'task.created',

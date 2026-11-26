@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreMilestoneRequest extends FormRequest
 {
@@ -22,6 +23,8 @@ class StoreMilestoneRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['name' => ['required', 'string', 'max:120'], 'target_date' => ['nullable', 'date']];
+        $project = $this->route('project');
+
+        return ['name' => ['required', 'string', 'max:120'], 'target_date' => ['nullable', 'date'], 'release_id' => ['nullable', 'ulid', Rule::exists('releases', 'id')->where('project_id', $project instanceof Project ? $project->id : null)]];
     }
 }

@@ -25,14 +25,14 @@
             icon: UserRound,
         },
         {
-            title: 'Keamanan',
-            href: editSecurity(),
-            icon: ShieldCheck,
-        },
-        {
             title: 'Tampilan',
             href: editAppearance(),
             icon: SunMedium,
+        },
+        {
+            title: 'Keamanan',
+            href: editSecurity(),
+            icon: ShieldCheck,
         },
     ];
 
@@ -40,13 +40,18 @@
 </script>
 
 <div class="flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-    <PageHeader title="Pengaturan" description="Kelola profil, keamanan, dan preferensi tampilan akun Anda." />
+    <PageHeader
+        breadcrumbs={[{ label: 'Setelan' }]}
+        title="Setelan"
+        description="Kelola profil, keamanan, dan preferensi akun Anda."
+    />
 
-    <div class="grid min-w-0 gap-6 lg:grid-cols-[13rem_minmax(0,42rem)] lg:items-start lg:gap-10">
+    <div class="grid min-w-0 gap-5 lg:grid-cols-[13rem_minmax(0,48rem)] lg:items-start lg:gap-8">
         <aside class="min-w-0">
+            <p class="mb-1.5 px-3 text-xs font-medium text-muted-foreground">Pribadi</p>
             <nav class="flex gap-1 overflow-x-auto lg:grid lg:gap-1" aria-label="Pengaturan akun">
                 {#each sidebarNavItems as item (toUrl(item.href))}
-                    <Link href={toUrl(item.href)} class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {url.isCurrentUrl(item.href, url.currentUrl) ? 'bg-accent font-medium text-accent-foreground' : 'text-muted-foreground'}">
+                    <Link href={toUrl(item.href)} class="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {url.isCurrentUrl(item.href, url.currentUrl) ? 'bg-accent font-medium text-accent-foreground' : 'text-muted-foreground'}">
                         <item.icon class="size-4" />
                         {item.title}
                     </Link>

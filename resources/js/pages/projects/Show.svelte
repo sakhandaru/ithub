@@ -5,6 +5,7 @@
     import FolderKanban from 'carbon-icons-svelte/lib/FolderTree.svelte';
     import ListTodo from 'carbon-icons-svelte/lib/Task.svelte';
     import RotateCcw from 'carbon-icons-svelte/lib/Renew.svelte';
+    import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
     import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
     import ProjectArchiveController from '@/actions/App/Http/Controllers/ProjectArchiveController';
     import ProjectSettingsController from '@/actions/App/Http/Controllers/ProjectSettingsController';
@@ -38,19 +39,19 @@
 <AppHead title={`${project.identifier} · ${project.name}`} />
 
 <div class="flex min-w-0 flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-    <PageHeader breadcrumbs={projectDetailBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name)}>
+    <PageHeader breadcrumbs={projectDetailBreadcrumbs(page.props.unitContext?.active?.name ?? workspace.name, page.props.unitContext?.active?.id, toUrl(ProjectController.index(workspace.id)), project.name, undefined, page.props.projectContext?.active?.icon)}>
         {#snippet actions()}
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap items-center gap-1">
             {#if canManage}
-                <Button variant="outline" class="min-h-11" asChild>
+                <Button variant="outline" class="h-7 shrink-0 gap-1.5 border-border/80 bg-background px-2.5 text-xs text-muted-foreground" asChild>
                     {#snippet children(props)}
-                        <Link href={toUrl(ProjectSettingsController.show({ workspace: workspace.id, project: project.id }))} {...props}>Pengaturan</Link>
+                        <Link href={toUrl(ProjectSettingsController.show({ workspace: workspace.id, project: project.id }))} {...props} aria-label="Pengaturan project" title="Pengaturan project"><Settings class="size-4" aria-hidden="true" />Pengaturan</Link>
                     {/snippet}
                 </Button>
                 {#if !project.archived}
                     <Form {...ProjectArchiveController.archive.form({ workspace: workspace.id, project: project.id })} onsubmit={confirmArchive}>
                         {#snippet children({ processing })}
-                            <Button type="submit" variant="outline" class="min-h-11" disabled={processing}>
+                        <Button type="submit" variant="outline" class="h-7 shrink-0 gap-1.5 border-border/80 bg-background px-2.5 text-xs text-muted-foreground hover:text-destructive" disabled={processing} aria-label="Arsipkan project" title="Arsipkan project">
                                 <Archive class="size-4" aria-hidden="true" />
                                 Arsipkan
                             </Button>
@@ -60,7 +61,7 @@
             {:else if canRestore}
                 <Form {...ProjectArchiveController.restore.form({ workspace: workspace.id, project: project.id })}>
                     {#snippet children({ processing })}
-                        <Button type="submit" class="min-h-11" disabled={processing}>
+                        <Button type="submit" variant="outline" class="h-7 shrink-0 gap-1.5 border-border/80 bg-background px-2.5 text-xs text-muted-foreground" disabled={processing} aria-label="Pulihkan project" title="Pulihkan project">
                             <RotateCcw class="size-4" aria-hidden="true" />
                             Pulihkan Project
                         </Button>

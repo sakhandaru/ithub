@@ -18,7 +18,7 @@
 
 <AppShell variant="sidebar">
     <div class="flex h-full min-h-0 w-full overflow-hidden bg-background">
-        <div class="flex h-full min-h-0 w-full flex-col overflow-hidden bg-muted md:rounded-2xl md:border md:border-border/80 md:shadow-lg">
+        <div class="flex h-full min-h-0 w-full flex-col overflow-hidden bg-muted md:border md:border-border/80 md:shadow-lg">
             <AppSidebarHeader {breadcrumbs} />
             <div class="flex min-h-0 flex-1">
             <AppSidebar>

@@ -30,6 +30,7 @@ declare module '@inertiajs/core' {
                     id: string;
                     workspace_id: string;
                     name: string;
+                    icon: string;
                     identifier: string;
                     archived: boolean;
                 } | null;
@@ -37,6 +38,7 @@ declare module '@inertiajs/core' {
                     id: string;
                     workspace_id: string;
                     name: string;
+                    icon: string;
                     identifier: string;
                 }>;
             };

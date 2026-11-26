@@ -51,7 +51,7 @@ class UnitMembershipPolicy
 
         $membership = $unitMembership->unit->workspace->memberships()->whereBelongsTo($user)->first();
 
-        return $membership ? WorkspaceRole::from((string) $membership->getRawOriginal('role'))->canManageWorkspace() : false;
+        return $membership ? WorkspaceRole::from((string) $membership->getRawOriginal('role'))->canManageMembers() : false;
     }
 
     /**

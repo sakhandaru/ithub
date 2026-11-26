@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'workspace_id',
     'unit_id',
     'name',
+    'icon',
     'identifier',
     'description',
     'visibility',
@@ -127,6 +128,24 @@ class Project extends Model
     public function milestones(): HasMany
     {
         return $this->hasMany(Milestone::class);
+    }
+
+    /** @return HasMany<ProjectUpdate, $this> */
+    public function updates(): HasMany
+    {
+        return $this->hasMany(ProjectUpdate::class);
+    }
+
+    /** @return HasMany<Module, $this> */
+    public function modules(): HasMany
+    {
+        return $this->hasMany(Module::class);
+    }
+
+    /** @return HasMany<Release, $this> */
+    public function releases(): HasMany
+    {
+        return $this->hasMany(Release::class);
     }
 
     /** @return HasMany<TaskRelation, $this> */

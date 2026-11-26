@@ -15,11 +15,10 @@ final class TransitionTask
 {
     /** @var array<string, list<string>> */
     private const array AllowedTransitions = [
-        'request' => ['backlog'],
         'backlog' => ['todo'],
         'todo' => ['in_progress'],
-        'in_progress' => ['in_review', 'blocked', 'canceled'],
-        'in_review' => ['done', 'in_progress', 'blocked', 'canceled'],
+        'in_progress' => ['review', 'blocked', 'canceled'],
+        'review' => ['done', 'in_progress', 'blocked', 'canceled'],
         'blocked' => ['in_progress', 'canceled'],
         'done' => ['in_progress'],
         'canceled' => [],

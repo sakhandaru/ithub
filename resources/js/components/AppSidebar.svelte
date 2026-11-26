@@ -2,20 +2,18 @@
     import { Link } from '@inertiajs/svelte';
     import { onMount } from 'svelte';
     import BriefcaseBusiness from 'carbon-icons-svelte/lib/Dashboard.svelte';
-    import RefreshCw from 'carbon-icons-svelte/lib/Renew.svelte';
+    import Bullhorn from 'carbon-icons-svelte/lib/Bullhorn.svelte';
     import Folder from 'carbon-icons-svelte/lib/Folder.svelte';
     import LayoutDashboard from 'carbon-icons-svelte/lib/Dashboard.svelte';
     import LayoutGrid from 'carbon-icons-svelte/lib/Grid.svelte';
     import BarChart3 from 'carbon-icons-svelte/lib/ChartBar.svelte';
     import ListTodo from 'carbon-icons-svelte/lib/Task.svelte';
     import ClipboardList from 'carbon-icons-svelte/lib/ListChecked.svelte';
-    import Inbox from 'carbon-icons-svelte/lib/Email.svelte';
     import Archive from 'carbon-icons-svelte/lib/Archive.svelte';
     import BookOpen from 'carbon-icons-svelte/lib/Book.svelte';
     import Document from 'carbon-icons-svelte/lib/Document.svelte';
     import Eye from 'carbon-icons-svelte/lib/View.svelte';
     import Plus from 'carbon-icons-svelte/lib/Add.svelte';
-    import RotateCcw from 'carbon-icons-svelte/lib/Renew.svelte';
     import Palette from 'carbon-icons-svelte/lib/PaintBrush.svelte';
     import Activity from 'carbon-icons-svelte/lib/Activity.svelte';
     import Flag from 'carbon-icons-svelte/lib/Flag.svelte';
@@ -24,7 +22,6 @@
     import UserRound from 'carbon-icons-svelte/lib/UserAvatarFilled.svelte';
     import ChevronDown from 'carbon-icons-svelte/lib/ChevronDown.svelte';
     import type { Snippet } from 'svelte';
-    import NavUser from '@/components/NavUser.svelte';
     import { Sidebar, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
     import { currentUrlState } from '@/lib/currentUrl.svelte';
     import { dashboard } from '@/routes';
@@ -34,21 +31,22 @@
     import { edit as editProfile } from '@/routes/profile';
     import { edit as editSecurity } from '@/routes/security';
     import UnitSettingsController from '@/actions/App/Http/Controllers/UnitSettingsController';
+    import WorkspaceSettingsController from '@/actions/App/Http/Controllers/WorkspaceSettingsController';
     import AdminManagementController from '@/actions/App/Http/Controllers/AdminManagementController';
-    import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
-    import ProjectAttachmentController from '@/actions/App/Http/Controllers/ProjectAttachmentController';
     import TaskController from '@/actions/App/Http/Controllers/TaskController';
+    import ProjectAttachmentController from '@/actions/App/Http/Controllers/ProjectAttachmentController';
     import { index as projectsIndex } from '@/routes/workspaces/projects';
     import { activity as workspaceActivity } from '@/routes/workspaces';
     import { analytics as unitAnalytics } from '@/routes/workspaces';
-    import { cycles, modules, show as projectShow } from '@/routes/workspaces/projects';
+    import { dashboard as projectDashboard, modules } from '@/routes/workspaces/projects';
     import { activity as projectActivity } from '@/routes/workspaces/projects';
-    import { inbox as projectInbox, releases as projectReleases, updates as projectUpdates } from '@/routes/workspaces/projects';
+    import { releases as projectReleases, updates as projectUpdates } from '@/routes/workspaces/projects';
     import { index as projectMilestones } from '@/routes/workspaces/projects/milestones';
     import { show as projectSettings } from '@/routes/workspaces/projects/settings';
     import { page } from '@inertiajs/svelte';
     import { toUrl } from '@/lib/utils';
     import CommandPalette from '@/components/CommandPalette.svelte';
+    import SidebarQuickActions from '@/components/SidebarQuickActions.svelte';
 
     let {
         children,
@@ -57,7 +55,7 @@
     } = $props();
 
     const url = currentUrlState();
-    const { isMobile, setOpen, setOpenMobile } = useSidebar();
+    const { isMobile, state: sidebarState, setOpen, setOpenMobile } = useSidebar();
     const unitContext = $derived(page.props.unitContext);
     const projectContext = $derived(page.props.projectContext);
     let expandedProjectId = $state<string | null>(null);
@@ -74,20 +72,19 @@
     let isResizing = $state(false);
     const isWorkspaceSettings = $derived(url.currentUrl.startsWith('/workspaces/') && url.currentUrl.endsWith('/settings'));
     const isUnitSettings = $derived(url.currentUrl.startsWith('/units/') && url.currentUrl.endsWith('/settings'));
+    const isProjectSettings = $derived(url.currentUrl.includes('/projects/') && url.currentUrl.endsWith('/settings'));
     const isAdminManagement = $derived(url.currentUrl.startsWith('/admin'));
-    const isSettings = $derived(url.currentUrl.startsWith('/settings') || isWorkspaceSettings || isUnitSettings || isAdminManagement);
+    const isSettings = $derived(url.currentUrl.startsWith('/settings') || isAdminManagement);
     const isAdmin = $derived(page.props.auth?.user?.system_role === 'admin');
     const isDashboardActive = $derived(url.isCurrentUrl(dashboard(), url.currentUrl) && !isSettings);
     const isUnitDashboardActive = $derived(url.currentUrl.startsWith('/units/') && url.currentUrl.endsWith('/dashboard'));
     const isUnitArchiveActive = $derived(new URL(page.url, 'http://localhost').searchParams.get('archived') === '1');
     const isProjectsIndexActive = $derived(url.currentUrl.endsWith('/projects') && !projectContext.active && !isSettings && !isUnitArchiveActive);
     const isTaskView = $derived(url.currentUrl.includes('/tasks') || url.currentUrl.endsWith('/board'));
-    const isCyclesActive = $derived(url.currentUrl.endsWith('/cycles'));
     const isModulesActive = $derived(url.currentUrl.endsWith('/modules'));
     const isMilestoneActive = $derived(url.currentUrl.endsWith('/milestones'));
     const isActivityActive = $derived(url.currentUrl.endsWith('/activity') && url.currentUrl.includes('/projects/'));
     const isFilesActive = $derived(url.currentUrl.includes('/projects/') && url.currentUrl.endsWith('/files'));
-    const isInboxActive = $derived(url.currentUrl.endsWith('/inbox'));
     const isReleasesActive = $derived(url.currentUrl.endsWith('/releases'));
     const isUpdatesActive = $derived(url.currentUrl.endsWith('/updates'));
     const isWorkspaceActivityActive = $derived(url.currentUrl.endsWith('/activity') && !url.currentUrl.includes('/projects/'));
@@ -199,27 +196,31 @@
                         <span class="sr-only">Admin</span>
                     </Link>
                 {/if}
+
+                <Link
+                    href={toUrl(editProfile())}
+                    class="relative flex size-10 items-center justify-center rounded-md hover:bg-sidebar-accent/50 focus-visible:ring-2 focus-visible:ring-sidebar-ring {isSettings
+                        ? 'text-sidebar-foreground'
+                        : 'text-muted-foreground'}"
+                    aria-label="Pengaturan"
+                    aria-current={isSettings ? 'page' : undefined}
+                    title="Pengaturan"
+                    onclick={closeMobileNavigation}
+                >
+                    {#if isSettings}
+                        <span class="absolute inset-y-2 left-0 w-0.5 rounded-r bg-sidebar-primary" aria-hidden="true"></span>
+                    {/if}
+                    <Settings class="size-5" aria-hidden="true" />
+                    <span class="sr-only">Pengaturan</span>
+                </Link>
             </div>
 
-            <Link
-                href={toUrl(editProfile())}
-                class="relative flex size-10 items-center justify-center rounded-md hover:bg-sidebar-accent/50 focus-visible:ring-2 focus-visible:ring-sidebar-ring {isSettings
-                    ? 'text-sidebar-foreground'
-                    : 'text-muted-foreground'}"
-                aria-label="Pengaturan"
-                aria-current={isSettings ? 'page' : undefined}
-                title="Pengaturan"
-                onclick={closeMobileNavigation}
-            >
-                {#if isSettings}
-                    <span
-                        class="absolute inset-y-2 left-0 w-0.5 rounded-r bg-sidebar-primary"
-                        aria-hidden="true"
-                    ></span>
-                {/if}
-                <Settings class="size-5" aria-hidden="true" />
-                <span class="sr-only">Pengaturan</span>
-            </Link>
+            {#if $sidebarState === 'collapsed' && !isSettings}
+                <div class="w-full border-t border-sidebar-border/70 pt-2">
+                    <SidebarQuickActions compact onNavigate={closeMobileNavigation} />
+                </div>
+            {/if}
+
         </nav>
 
         <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden md:mt-0 md:mr-3 md:mb-3 md:ml-0 md:rounded-xl md:border md:border-border/80 md:bg-card md:shadow-sm">
@@ -235,36 +236,28 @@
             <header class="flex h-11 shrink-0 items-center gap-1 border-b border-border/80 px-1.5" aria-label={`Header ${contextAreaLabel}`}>
                 <p class="min-w-0 flex-1 truncate px-1 text-sm font-semibold" title={contextAreaLabel}>{contextAreaLabel}</p>
                 <SidebarTrigger class="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-transparent hover:text-sidebar-foreground" />
-                {#if isAdminManagement}
-                    <Link href={toUrl(AdminManagementController.url('system'))} class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-label="Pengaturan Administrasi" title="Pengaturan Administrasi" onclick={closeMobileNavigation}>
-                        <Settings class="size-4" aria-hidden="true" />
-                    </Link>
-                {:else if projectContext.active}
-                    <Link href={toUrl(projectSettings([projectContext.active.workspace_id, projectContext.active.id]))} class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-label="Pengaturan Project" title="Pengaturan Project" onclick={closeMobileNavigation}>
-                        <Settings class="size-4" aria-hidden="true" />
-                    </Link>
-                {:else if unitContext.active}
-                    <Link href={toUrl(UnitSettingsController.url(unitContext.active.id))} class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-label="Pengaturan Unit" title="Pengaturan Unit" onclick={closeMobileNavigation}>
-                        <Settings class="size-4" aria-hidden="true" />
-                    </Link>
-                {:else}
-                    <Link href={toUrl(editProfile())} class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-label="Pengaturan akun" title="Pengaturan akun" onclick={closeMobileNavigation}>
-                        <Settings class="size-4" aria-hidden="true" />
-                    </Link>
-                {/if}
             </header>
 
             <div class="min-h-0 flex-1 overflow-y-auto px-2 py-2">
                 {#if isSettings}
                     <p class="px-2 pb-1.5 text-xs font-medium text-muted-foreground">
-                        {isAdminManagement ? 'Administrasi' : (isWorkspaceSettings || isUnitSettings) ? 'Pengaturan Unit' : 'Pengaturan akun'}
+                        {isAdminManagement ? 'Administrasi' : isWorkspaceSettings ? 'Pengaturan Workspace' : isUnitSettings ? 'Pengaturan Unit' : 'Pengaturan akun'}
                     </p>
-                    <nav class="grid gap-0.5" aria-label={isAdminManagement ? 'Administrasi' : (isWorkspaceSettings || isUnitSettings) ? 'Pengaturan Unit' : 'Pengaturan akun'}>
+                    <nav class="grid gap-0.5" aria-label={isAdminManagement ? 'Administrasi' : isWorkspaceSettings ? 'Pengaturan Workspace' : isUnitSettings ? 'Pengaturan Unit' : 'Pengaturan akun'}>
                         {#if isAdminManagement}
                             {#each [{ key: 'users', label: 'Manajemen User' }, { key: 'units', label: 'Manajemen Unit' }, { key: 'roles', label: 'Role & Akses' }, { key: 'audit-log', label: 'Audit Log' }, { key: 'system', label: 'Pengaturan Sistem' }] as item}
                                 <Link href={toUrl(AdminManagementController.url(item.key))} class="flex min-h-9 items-center gap-2.5 rounded-md px-2 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.currentUrl === `/admin/${item.key}` || (item.key === 'users' && url.currentUrl === '/admin') ? 'bg-sidebar-accent font-medium' : 'text-muted-foreground'}" aria-current={url.currentUrl === `/admin/${item.key}` || (item.key === 'users' && url.currentUrl === '/admin') ? 'page' : undefined} onclick={closeMobileNavigation}>{item.label}</Link>
                             {/each}
-                        {:else if (isWorkspaceSettings || isUnitSettings) && unitContext.active}
+                        {:else if isWorkspaceSettings && unitContext.active}
+                            <Link
+                                href={toUrl(WorkspaceSettingsController.show(unitContext.active.workspace_id))}
+                                class="flex min-h-9 items-center gap-2.5 rounded-md bg-sidebar-accent px-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                aria-current="page"
+                                onclick={closeMobileNavigation}
+                            >
+                                Umum & Anggota
+                            </Link>
+                        {:else if isUnitSettings && unitContext.active}
                             <Link
                                 href={toUrl(UnitSettingsController.url(unitContext.active.id))}
                                 class="flex min-h-9 items-center gap-2.5 rounded-md bg-sidebar-accent px-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-sidebar-ring"
@@ -325,32 +318,11 @@
                         {/if}
                     </nav>
                 {:else}
+                    <div class="mb-1 px-0.5">
+                        <SidebarQuickActions onNavigate={closeMobileNavigation} />
+                    </div>
                     <nav class="ithub-sidebar-nav grid gap-2" aria-label="Navigasi Pekerjaan">
                         <section class="grid gap-0.5" aria-label="Pekerjaan">
-                            <div class="mt-2 mb-2 grid grid-cols-2 gap-1.5">
-                                {#if unitContext.active}
-                                    <Link href={toUrl(ProjectController.create(unitContext.active.workspace_id))} class="inline-flex max-w-full min-w-0 min-h-9 items-center justify-center gap-1.5 rounded-md border border-sidebar-border/70 px-2 text-xs font-medium text-muted-foreground hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring" onclick={closeMobileNavigation}>
-                                        <Plus class="size-4" aria-hidden="true" />
-                                        <span class="truncate">Project</span>
-                                    </Link>
-                                {:else}
-                                    <span class="inline-flex max-w-full min-w-0 min-h-9 items-center justify-center gap-1.5 rounded-md border border-sidebar-border/70 px-2 text-xs text-muted-foreground/60" aria-disabled="true">
-                                        <Plus class="size-4" aria-hidden="true" />
-                                        <span class="truncate">Project</span>
-                                    </span>
-                                {/if}
-                                {#if projectContext.active}
-                                    <Link href={`${toUrl(TaskController.index({ workspace: projectContext.active.workspace_id, project: projectContext.active.id }))}#quick-task`} class="inline-flex max-w-full min-w-0 min-h-9 items-center justify-center gap-1.5 rounded-md border border-sidebar-border/70 px-2 text-xs font-medium text-muted-foreground hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring" onclick={closeMobileNavigation}>
-                                        <Plus class="size-4" aria-hidden="true" />
-                                        <span class="truncate">Task</span>
-                                    </Link>
-                                {:else}
-                                    <span class="inline-flex max-w-full min-w-0 min-h-9 items-center justify-center gap-1.5 rounded-md border border-sidebar-border/70 px-2 text-xs text-muted-foreground/60" aria-disabled="true">
-                                        <Plus class="size-4" aria-hidden="true" />
-                                        <span class="truncate">Task</span>
-                                    </span>
-                                {/if}
-                            </div>
                             <Link href={toUrl(dashboard())} class="flex min-h-9 items-center gap-2.5 rounded-md px-2 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isDashboardActive ? 'bg-sidebar-accent font-medium' : 'text-muted-foreground'}" aria-current={isDashboardActive ? 'page' : undefined} onclick={closeMobileNavigation}>
                                 <LayoutDashboard class="size-4" aria-hidden="true" />
                                 Beranda
@@ -368,14 +340,14 @@
                                     <Folder class="size-4" aria-hidden="true" />
                                     Projects
                                 </Link>
+                                <Link href={toUrl(unitDashboard(unitContext.active.id))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isUnitDashboardActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isUnitDashboardActive ? 'page' : undefined} onclick={closeMobileNavigation}>
+                                    <LayoutDashboard class="size-4" aria-hidden="true" />
+                                    <span>Dasbor</span>
+                                </Link>
                                 <Link href={toUrl(workspaceActivity(unitContext.active.workspace_id))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isWorkspaceActivityActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : ''}" aria-current={isWorkspaceActivityActive ? 'page' : undefined} onclick={closeMobileNavigation}>
                                     <Activity class="size-4" aria-hidden="true" />
                                     Aktivitas
                                 </Link>
-                            <Link href={toUrl(unitDashboard(unitContext.active.id))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isUnitDashboardActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isUnitDashboardActive ? 'page' : undefined} onclick={closeMobileNavigation}>
-                                <LayoutDashboard class="size-4" aria-hidden="true" />
-                                <span>Dasbor</span>
-                            </Link>
                             <Link href={toUrl(unitAnalytics(unitContext.active.workspace_id))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isUnitAnalyticsActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isUnitAnalyticsActive ? 'page' : undefined} onclick={closeMobileNavigation}>
                                 <BarChart3 class="size-4" aria-hidden="true" />
                                 <span>Analitik</span>
@@ -385,7 +357,7 @@
                                 <span>Arsip</span>
                             </Link>
                                 {#if unitContext.active.can_manage}
-                                    <Link href={toUrl(UnitSettingsController.url(unitContext.active.id))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring" onclick={closeMobileNavigation}>
+                                    <Link href={toUrl(UnitSettingsController.url(unitContext.active.id))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isUnitSettings ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isUnitSettings ? 'page' : undefined} onclick={closeMobileNavigation}>
                                         <Settings class="size-4" aria-hidden="true" />
                                         Setelan
                                     </Link>
@@ -402,23 +374,21 @@
                                     {#each projectContext.available as project (project.id)}
                                         <div>
                                             <button type="button" class="flex min-h-10 w-full items-center gap-3 rounded-md px-2.5 text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-expanded={expandedProjectId === project.id} aria-controls={`project-nav-${project.id}`} onclick={() => toggleProject(project.id)}>
-                                                <span class="flex size-5 shrink-0 items-center justify-center rounded bg-sidebar-accent text-[9px] font-semibold" aria-hidden="true">{project.identifier.slice(0, 2)}</span>
+                                                <span class="flex size-5 shrink-0 items-center justify-center text-base" aria-hidden="true">{project.icon}</span>
                                                 <span class="min-w-0 truncate" title={project.name}>{project.name}</span>
                                                 <ChevronDown class="ml-auto size-4 shrink-0 text-muted-foreground transition-transform {expandedProjectId === project.id ? '' : '-rotate-90'}" aria-hidden="true" />
                                             </button>
                                             {#if expandedProjectId === project.id}
                                                 <div id={`project-nav-${project.id}`} class="ml-4 grid gap-0.5 pl-1.5">
-                                                    <Link href={toUrl(projectShow([project.workspace_id, project.id]))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.currentUrl === toUrl(projectShow([project.workspace_id, project.id])) ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={url.currentUrl === toUrl(projectShow([project.workspace_id, project.id])) ? 'page' : undefined} onclick={closeMobileNavigation}><LayoutDashboard class="size-4" aria-hidden="true" />Beranda</Link>
+                                                    <Link href={toUrl(projectDashboard([project.workspace_id, project.id]))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {url.currentUrl === toUrl(projectDashboard([project.workspace_id, project.id])) ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={url.currentUrl === toUrl(projectDashboard([project.workspace_id, project.id])) ? 'page' : undefined} onclick={closeMobileNavigation}><LayoutDashboard class="size-4" aria-hidden="true" />Beranda</Link>
                                                     <Link href={toUrl(TaskController.index({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isTaskView ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isTaskView ? 'page' : undefined} onclick={closeMobileNavigation}><ListTodo class="size-4" aria-hidden="true" />Task</Link>
+                                                    <Link href={toUrl(projectUpdates({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isUpdatesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isUpdatesActive ? 'page' : undefined} onclick={closeMobileNavigation}><Bullhorn class="size-4" aria-hidden="true" />Update</Link>
                                                     <Link href={toUrl(ProjectAttachmentController.index({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isFilesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isFilesActive ? 'page' : undefined} onclick={closeMobileNavigation}><Document class="size-4" aria-hidden="true" />Berkas</Link>
-                                                    <Link href={toUrl(cycles({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isCyclesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isCyclesActive ? 'page' : undefined} onclick={closeMobileNavigation}><RotateCcw class="size-4" aria-hidden="true" />Siklus</Link>
                                                     <Link href={toUrl(modules({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isModulesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isModulesActive ? 'page' : undefined} onclick={closeMobileNavigation}><LayoutGrid class="size-4" aria-hidden="true" />Modul</Link>
-                                                    <Link href={toUrl(projectInbox({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isInboxActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isInboxActive ? 'page' : undefined} onclick={closeMobileNavigation}><Inbox class="size-4" aria-hidden="true" />Inbox</Link>
-                                                    <Link href={toUrl(projectReleases({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isReleasesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isReleasesActive ? 'page' : undefined} onclick={closeMobileNavigation}><Plus class="size-4" aria-hidden="true" />Rilis</Link>
-                                                    <Link href={toUrl(projectUpdates({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isUpdatesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isUpdatesActive ? 'page' : undefined} onclick={closeMobileNavigation}><RefreshCw class="size-4" aria-hidden="true" />Update</Link>
                                                     <Link href={toUrl(projectMilestones({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isMilestoneActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isMilestoneActive ? 'page' : undefined} onclick={closeMobileNavigation}><Flag class="size-4" aria-hidden="true" />Milestone</Link>
-                                                    <Link href={toUrl(projectActivity({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-current={isActivityActive ? 'page' : undefined} onclick={closeMobileNavigation}><Activity class="size-4" aria-hidden="true" />Aktivitas</Link>
-                                                    <Link href={toUrl(projectSettings([project.workspace_id, project.id]))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring" aria-current={url.currentUrl.endsWith('/settings') ? 'page' : undefined} onclick={closeMobileNavigation}><Settings class="size-4" aria-hidden="true" />Setelan</Link>
+                                                    <Link href={toUrl(projectReleases({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isReleasesActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isReleasesActive ? 'page' : undefined} onclick={closeMobileNavigation}><Plus class="size-4" aria-hidden="true" />Rilis</Link>
+                                                    <Link href={toUrl(projectActivity({ workspace: project.workspace_id, project: project.id }))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isActivityActive ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isActivityActive ? 'page' : undefined} onclick={closeMobileNavigation}><Activity class="size-4" aria-hidden="true" />Aktivitas</Link>
+                                                    <Link href={toUrl(projectSettings([project.workspace_id, project.id]))} class="flex min-h-10 items-center gap-3 rounded-md px-2.5 text-sm hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring {isProjectSettings ? 'bg-sidebar-accent font-medium text-sidebar-foreground' : 'text-muted-foreground'}" aria-current={isProjectSettings ? 'page' : undefined} onclick={closeMobileNavigation}><Settings class="size-4" aria-hidden="true" />Setelan</Link>
                                                 </div>
                                             {/if}
                                         </div>
@@ -472,9 +442,6 @@
                 }}
             ></button>
 
-            <div class="border-t border-sidebar-border p-2">
-                <NavUser />
-            </div>
         </div>
             </Sidebar>
             <div class="relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">

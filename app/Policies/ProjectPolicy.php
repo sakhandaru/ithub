@@ -48,7 +48,7 @@ class ProjectPolicy
      */
     public function create(User $user, Workspace $workspace): bool
     {
-        return $user->isAdmin() || ($this->workspaceRole($user, $workspace)?->canManageWorkspace() ?? false);
+        return $user->isAdmin() || ($this->workspaceRole($user, $workspace)?->canCreateProjects() ?? false);
     }
 
     /**

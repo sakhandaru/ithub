@@ -14,6 +14,21 @@ enum WorkspaceRole: string
         return $this === self::Owner || $this === self::WorkspaceAdmin;
     }
 
+    public function canManageUnits(): bool
+    {
+        return $this->canManageWorkspace();
+    }
+
+    public function canManageMembers(): bool
+    {
+        return $this->canManageWorkspace();
+    }
+
+    public function canCreateProjects(): bool
+    {
+        return $this->canManageWorkspace();
+    }
+
     public function label(): string
     {
         return match ($this) {

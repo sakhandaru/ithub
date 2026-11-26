@@ -27,10 +27,9 @@ class UpdateTaskRequest extends FormRequest
             'requester_id' => ['sometimes', 'integer', 'exists:users,id'],
             'start_date' => ['sometimes', 'nullable', 'date'],
             'due_date' => ['sometimes', 'nullable', 'date'],
-            'label_ids' => ['sometimes', 'array'],
-            'label_ids.*' => ['ulid', 'exists:labels,id'],
-            'parent_task_id' => ['sometimes', 'nullable', 'ulid', 'exists:tasks,id'],
             'milestone_id' => ['sometimes', 'nullable', 'ulid', 'exists:milestones,id'],
+            'module_id' => ['sometimes', 'nullable', 'ulid', 'exists:modules,id'],
+            'release_id' => ['sometimes', 'nullable', 'ulid', 'exists:releases,id'],
         ];
     }
 
@@ -47,13 +46,16 @@ class UpdateTaskRequest extends FormRequest
                 $validator->errors()->add('requester_id', 'Pemohon harus menjadi anggota Project.');
             }
 
-            $labelIds = $this->input('label_ids', []);
-            if ($labelIds !== [] && $task->project->labels()->whereIn('id', $labelIds)->count() !== count($labelIds)) {
-                $validator->errors()->add('label_ids', 'Label harus berasal dari Project yang sama.');
-            }
-
             if ($this->has('milestone_id') && $this->input('milestone_id') !== null && ! $task->project->milestones()->whereKey($this->input('milestone_id'))->exists()) {
                 $validator->errors()->add('milestone_id', 'Milestone harus berasal dari Project yang sama.');
+            }
+
+            if ($this->has('module_id') && $this->input('module_id') !== null && ! $task->project->modules()->whereKey($this->input('module_id'))->exists()) {
+                $validator->errors()->add('module_id', 'Modul harus berasal dari Project yang sama.');
+            }
+
+            if ($this->has('release_id') && $this->input('release_id') !== null && ! $task->project->releases()->whereKey($this->input('release_id'))->exists()) {
+                $validator->errors()->add('release_id', 'Rilis harus berasal dari Project yang sama.');
             }
 
             $startDate = $this->input('start_date', $task->getRawOriginal('start_date'));
@@ -62,26 +64,6 @@ class UpdateTaskRequest extends FormRequest
                 $validator->errors()->add('start_date', 'Tanggal mulai tidak boleh setelah deadline.');
             }
 
-            if (! $this->has('parent_task_id') || $this->input('parent_task_id') === null) {
-                return;
-            }
-
-            $parent = $task->project->tasks()->whereKey($this->input('parent_task_id'))->first();
-            if (! $parent) {
-                $validator->errors()->add('parent_task_id', 'Parent Task harus berasal dari Project yang sama.');
-
-                return;
-            }
-
-            $visited = [];
-            while ($parent !== null) {
-                if ($parent->is($task) || in_array($parent->id, $visited, true)) {
-                    $validator->errors()->add('parent_task_id', 'Hierarchy Task tidak boleh membentuk siklus.');
-                    break;
-                }
-                $visited[] = $parent->id;
-                $parent = $parent->parentTask()->first();
-            }
         }];
     }
 }

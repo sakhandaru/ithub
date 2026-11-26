@@ -210,6 +210,39 @@
                     </Link>
                     <Link href={toUrl(notificationsIndex())} class="relative inline-flex size-9 items-center justify-center rounded-md hover:bg-accent" aria-label="Notifikasi"><Bell class="size-5 opacity-80" />{#if unreadCount > 0}<span class="absolute right-1 top-1 size-2 rounded-full bg-destructive" aria-label={`${unreadCount} notifikasi belum dibaca`}></span>{/if}</Link>
 
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            {#snippet children(props)}
+                                <Button
+                                    {...props}
+                                    variant="ghost"
+                                    size="icon"
+                                    class="relative size-9 rounded-full p-1"
+                                    aria-label="Menu akun"
+                                >
+                                    <Avatar class="size-7 overflow-hidden rounded-full">
+                                        {#if auth.user?.avatar}
+                                            <AvatarImage
+                                                src={auth.user.avatar}
+                                                alt={auth.user.name}
+                                            />
+                                        {/if}
+                                        <AvatarFallback
+                                            class="rounded-full bg-neutral-200 text-sm font-semibold text-black dark:bg-neutral-700 dark:text-white"
+                                        >
+                                            {getInitials(auth.user?.name ?? '')}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            {/snippet}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="w-56">
+                            {#if auth.user}
+                                <UserMenuContent user={auth.user} />
+                            {/if}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <div class="hidden space-x-1 lg:flex">
                         {#each rightNavItems as item (toUrl(item.href))}
                             <TooltipProvider delayDuration={0}>
@@ -241,41 +274,6 @@
                     </div>
                 </div>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        {#snippet children(props)}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="relative size-10 w-auto rounded-full p-1 focus-within:ring-2 focus-within:ring-primary"
-                                onclick={props.onclick}
-                                aria-expanded={props['aria-expanded']}
-                                data-state={props['data-state']}
-                            >
-                                <Avatar
-                                    class="size-8 overflow-hidden rounded-full"
-                                >
-                                    {#if auth.user?.avatar}
-                                        <AvatarImage
-                                            src={auth.user.avatar}
-                                            alt={auth.user?.name}
-                                        />
-                                    {/if}
-                                    <AvatarFallback
-                                        class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
-                                    >
-                                        {getInitials(auth.user?.name ?? '')}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </Button>
-                        {/snippet}
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" class="w-56">
-                        {#if auth.user}
-                            <UserMenuContent user={auth.user} />
-                        {/if}
-                    </DropdownMenuContent>
-                </DropdownMenu>
             </div>
         </div>
     </div>

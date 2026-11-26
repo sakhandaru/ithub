@@ -7,7 +7,6 @@ use App\Actions\Workspaces\CreateWorkspace;
 use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\User;
-use Illuminate\Validation\ValidationException;
 
 test('project creation assigns the creator as project admin and lead', function () {
     $creator = User::factory()->create();
@@ -16,13 +15,15 @@ test('project creation assigns the creator as project admin and lead', function 
 
     $project = app(CreateProject::class)->handle($creator, $workspace, [
         'name' => 'Portal Internal',
+        'icon' => '🚀',
         'identifier' => 'PORTAL',
         'unit_id' => $unit->id,
         'visibility' => 'unit',
         'status' => 'draft',
     ]);
 
-    expect($project->project_lead_id)->toBe($creator->id)
+    expect($project->icon)->toBe('🚀')
+        ->and($project->project_lead_id)->toBe($creator->id)
         ->and($project->memberships)->toHaveCount(1)
         ->and($project->memberships->first()->role->value)->toBe('project_admin');
 
@@ -32,7 +33,7 @@ test('project creation assigns the creator as project admin and lead', function 
     ]);
 });
 
-test('only completed or canceled projects can be archived and archived projects can be restored', function () {
+test('projects can be archived and restored', function () {
     $creator = User::factory()->create();
     $workspace = app(CreateWorkspace::class)->handle($creator, 'Engineering', 'Asia/Jakarta');
     $project = Project::factory()->create([
@@ -42,11 +43,7 @@ test('only completed or canceled projects can be archived and archived projects 
         'status' => ProjectStatus::Active,
     ]);
 
-    expect(fn () => app(ArchiveProject::class)->handle($creator, $project))
-        ->toThrow(ValidationException::class);
-
-    $project->update(['status' => ProjectStatus::Completed]);
-    $archived = app(ArchiveProject::class)->handle($creator, $project->fresh());
+    $archived = app(ArchiveProject::class)->handle($creator, $project);
 
     expect($archived->archived_at)->not->toBeNull();
 

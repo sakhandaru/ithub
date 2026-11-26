@@ -7,10 +7,9 @@
 </script>
 
 <script lang="ts">
-    import { Link } from '@inertiajs/svelte';
+    import { Form, Link } from '@inertiajs/svelte';
     import { createPaginatedRowModel, createTable, createTableState, rowPaginationFeature, tableFeatures } from '@tanstack/svelte-table';
     import type { ColumnDef } from '@tanstack/svelte-table';
-    import Archive from 'carbon-icons-svelte/lib/Archive.svelte';
     import ArrowUpRight from 'carbon-icons-svelte/lib/ArrowUpRight.svelte';
     import Building2 from 'carbon-icons-svelte/lib/Building.svelte';
     import CalendarDays from 'carbon-icons-svelte/lib/Calendar.svelte';
@@ -21,6 +20,8 @@
     import ChevronLeft from 'carbon-icons-svelte/lib/ChevronLeft.svelte';
     import ChevronRight from 'carbon-icons-svelte/lib/ChevronRight.svelte';
     import CircleAlert from 'carbon-icons-svelte/lib/WarningAlt.svelte';
+    import Archive from 'carbon-icons-svelte/lib/Archive.svelte';
+    import Folder from 'carbon-icons-svelte/lib/Folder.svelte';
     import FolderKanban from 'carbon-icons-svelte/lib/FolderTree.svelte';
     import Eye from 'carbon-icons-svelte/lib/View.svelte';
     import ListFilter from 'carbon-icons-svelte/lib/Filter.svelte';
@@ -30,6 +31,9 @@
     import UserRound from 'carbon-icons-svelte/lib/UserAvatarFilled.svelte';
     import ArrowUpDown from 'carbon-icons-svelte/lib/ArrowsVertical.svelte';
     import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
+    import UserAvatar from '@/components/UserAvatar.svelte';
+    import ProjectProgressSegments from '@/components/ProjectProgressSegments.svelte';
+    import ProjectArchiveController from '@/actions/App/Http/Controllers/ProjectArchiveController';
     import AppHead from '@/components/AppHead.svelte';
     import CreateProjectDialog from '@/components/CreateProjectDialog.svelte';
     import PageHeader from '@/components/PageHeader.svelte';
@@ -39,8 +43,6 @@
     import { Badge } from '@/components/ui/badge';
     import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-    import { avatarColor } from '@/lib/avatar-color';
-    import { getInitials } from '@/lib/initials';
     import { toUrl } from '@/lib/utils';
     import type { ProjectSummary } from '@/types';
     import { globalHeaderLabels, projectsIndexBreadcrumbs } from '@/lib/page-header';
@@ -89,7 +91,6 @@
     let sortKey = $state<SortKey>('name');
     let sortDirection = $state<SortDirection>('asc');
     let expandedProgressProjectId = $state<string | null>(null);
-    const progressSegmentCount = 30;
 
     const projectFeatures = tableFeatures({
         rowPaginationFeature,
@@ -196,11 +197,8 @@
         : 0;
     const statusClass = (status: string): string => ({
         active: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300',
-        planned: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300',
-        on_hold: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300',
-        completed: 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
-        canceled: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300',
         draft: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300',
+        archived: 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
     }[status] ?? 'border-border bg-muted text-muted-foreground');
     const visibilityClass = (visibility: string): string => ({
         unit: 'text-blue-700 dark:text-blue-300',
@@ -256,7 +254,7 @@
             <PageBreadcrumb items={projectsIndexBreadcrumbs(unit?.name ?? globalHeaderLabels.unit, unit?.id, showArchived, projects.length)} showSidebarTrigger />
         {/snippet}
         {#snippet actions()}
-            <div class="flex h-7 items-center justify-end gap-1.5">
+            <div class="flex min-h-7 flex-wrap items-center justify-end gap-1.5">
                 <label class="relative h-7 w-52 sm:w-60">
                     <span class="sr-only">Cari Project</span>
                     <Search class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -265,21 +263,18 @@
                         <Reset class="size-3.5" aria-hidden="true" />
                     </button>
                 </label>
-                <Button variant="outline" size="icon" class="h-7 w-7 shrink-0" asChild>
+                <Button variant="outline" class="h-7 shrink-0 gap-1.5 border-border/80 bg-background px-2.5 text-xs text-muted-foreground" asChild>
                     {#snippet children(props)}
                         <Link href={toUrl(ProjectController.index(workspace.id, { query: showArchived ? {} : { archived: 1 } }))} {...props}>
-                            <Archive class="size-3.5" aria-hidden="true" />
-                            <span class="sr-only">{showArchived ? 'Project aktif' : 'Lihat arsip'}</span>
+                            {#if showArchived}<Folder class="size-3.5" aria-hidden="true" />{:else}<Archive class="size-3.5" aria-hidden="true" />{/if}
+                            <span>{showArchived ? 'Project aktif' : 'Project arsip'}</span>
                         </Link>
                     {/snippet}
                 </Button>
                 {#if !showArchived}
-                <Button variant="outline" size="icon" class="h-7 w-7 shrink-0" asChild>
-                        {#snippet children(props)}
-                            <button type="button" class={props.class} aria-label="Buat Project" title="Buat Project" onclick={() => { createProjectOpen = true; }}>
-                                <Plus class="size-3.5" aria-hidden="true" />
-                            </button>
-                        {/snippet}
+                    <Button variant="outline" class="h-7 shrink-0 gap-1.5 border-border/80 bg-background px-2.5 text-xs text-muted-foreground" onclick={() => { createProjectOpen = true; }}>
+                        <Plus class="size-3.5" aria-hidden="true" />
+                        <span>Tambah Project</span>
                     </Button>
                 {/if}
             </div>
@@ -304,7 +299,7 @@
                     <button type="button" class="mt-3 text-sm font-medium text-primary hover:underline" onclick={resetFilters}>Reset filter</button>
                 </div>
             {:else}
-                <DataTable table={projectTable} caption="Daftar Project" headerIcons={projectHeaderIcons} wrapperClass="overflow-hidden" tableClass="w-full min-w-[64rem] border-collapse text-left text-xs" headerClass="border-b border-border/70 bg-muted/25 px-2.5 py-2 text-[11px] font-medium text-muted-foreground first:border-l-0 border-l border-border/60">
+                <DataTable table={projectTable} caption="Daftar Project" headerIcons={projectHeaderIcons} wrapperClass="overflow-hidden" tableClass="w-full min-w-[72rem] border-collapse text-left text-xs" headerClass="border-b border-border/70 bg-muted/25 px-3 py-2.5 text-xs font-medium text-muted-foreground first:border-l-0 border-l border-border/60">
                     {#snippet headerActions(columnId)}
                         {@const columnSortKey = sortKeyByColumn[columnId]}
                         {#if columnSortKey}
@@ -356,41 +351,46 @@
                         {@const project = row.original}
                         {@const completion = progress(project)}
                         <tr class="group border-b border-border/60 transition-colors last:border-b-0 hover:bg-muted/25">
-                            <td class="px-2.5 py-2"><Link href={toUrl(ProjectController.show({ workspace: workspace.id, project: project.id }))} class="group/link flex min-h-8 min-w-48 items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><FolderKanban class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span class="min-w-0"><span class="block truncate font-medium group-hover/link:text-primary group-hover/link:underline">{project.name}</span><span class="block font-mono text-[10px] text-muted-foreground">{project.identifier}</span></span></Link></td>
-                            <td class="border-l border-border/60 px-2.5 py-2"><Badge variant="outline" class={`min-h-6 rounded-full px-2 py-0.5 text-[11px] leading-4 ${statusClass(project.status)}`}><span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>{project.status_label}</Badge></td>
-                            <td class="min-w-56 border-l border-border/60 px-2.5 py-2">
+                            <td class="px-3 py-2.5"><Link href={toUrl(ProjectController.show({ workspace: workspace.id, project: project.id }))} class="group/link flex min-h-8 min-w-56 items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><FolderKanban class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span class="min-w-0"><span class="block truncate text-sm font-medium group-hover/link:text-primary group-hover/link:underline">{project.name}</span><span class="block font-mono text-xs text-muted-foreground">{project.identifier}</span></span></Link></td>
+                            <td class="border-l border-border/60 px-3 py-2.5"><Badge variant="outline" class={`min-h-7 rounded-full px-2.5 py-0.5 text-xs leading-4 ${statusClass(project.status)}`}><span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>{project.status_label}</Badge></td>
+                            <td class="min-w-60 border-l border-border/60 px-3 py-2.5">
                                 {#if expandedProgressProjectId === project.id}
-                                    <button type="button" class="inline-flex items-center gap-3 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-expanded="true" aria-label={`Tutup detail progress ${project.name}`} onclick={() => toggleProgress(project.id)}>
+                                    <button type="button" class="inline-flex items-center gap-3 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-expanded="true" aria-label={`Tutup detail progress ${project.name}`} onclick={() => toggleProgress(project.id)}>
                                         <span class="font-medium">{project.completed_tasks_count}/{project.tasks_count}</span>
                                         {#if project.overdue_tasks_count > 0}<span class="inline-flex items-center gap-1 text-red-600 dark:text-red-400"><CircleAlert class="size-3.5" aria-hidden="true" />{project.overdue_tasks_count} terlambat</span>{/if}
                                         {#if project.blocked_tasks_count > 0}<span class="inline-flex items-center gap-1 text-orange-600 dark:text-orange-400"><CircleAlert class="size-3.5" aria-hidden="true" />{project.blocked_tasks_count} blocked</span>{/if}
                                     </button>
                                 {:else}
                                     <button type="button" class="inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-expanded="false" aria-label={`Lihat progress ${project.name}`} onclick={() => toggleProgress(project.id)}>
-                                        <span class="flex shrink-0 gap-0.5 overflow-hidden" aria-hidden="true">
-                                            {#each Array.from({ length: progressSegmentCount }) as _, index}
-                                                <span class="h-6 w-1 shrink-0 rounded-sm {index < Math.round((completion / 100) * progressSegmentCount) ? 'bg-emerald-500' : 'bg-muted'}"></span>
-                                            {/each}
-                                        </span>
-                                        <span class="w-10 shrink-0 text-right text-xs font-semibold text-muted-foreground">{completion}%</span>
+                                        <ProjectProgressSegments completed={project.completed_tasks_count} total={project.tasks_count} />
+                                        <span class="w-10 shrink-0 text-right text-sm font-semibold text-muted-foreground">{completion}%</span>
                                     </button>
                                 {/if}
                             </td>
-                            <td class="border-l border-border/60 px-2.5 py-2">
+                            <td class="border-l border-border/60 px-3 py-2.5">
                                 {#if project.project_lead}
-                                    <span class="inline-flex min-h-6 max-w-40 items-center gap-1.5 rounded-full border border-border/70 px-1.5 py-0.5 text-[11px] leading-4 text-muted-foreground">
-                                        <span class={`flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${avatarColor(project.project_lead.name)}`} aria-hidden="true">{getInitials(project.project_lead.name)}</span>
+                                    <span class="inline-flex min-h-7 max-w-44 items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-xs leading-4 text-muted-foreground">
+                                        <UserAvatar user={project.project_lead} size="size-4" label={false} />
                                         <span class="truncate">{project.project_lead.name}</span>
                                     </span>
                                 {:else}
                                     <span class="text-[11px] text-muted-foreground">Belum ditentukan</span>
                                 {/if}
                             </td>
-                            <td class="border-l border-border/60 px-2.5 py-2"><span class="inline-flex min-h-6 max-w-40 items-center rounded-full border border-border/70 px-2 py-0.5 text-[11px] leading-4 text-muted-foreground"><span class="truncate">{project.unit?.name ?? '—'}</span></span></td>
-                            <td class="border-l border-border/60 px-2.5 py-2"><span class="inline-flex min-h-6 items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium leading-4 {visibilityClass(project.visibility)}"><span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>{project.visibility_label}</span></td>
-                            <td class="border-l border-border/60 px-2.5 py-2 text-muted-foreground"><div class="flex items-center gap-1.5 whitespace-nowrap text-[11px]"><CalendarDays class="size-3" aria-hidden="true" />{project.target_date ?? 'Tanpa target'}</div></td>
-                            <td class="border-l border-border/60 px-2 py-2 text-center">
-                                <Link href={toUrl(ProjectController.show({ workspace: workspace.id, project: project.id }))} class="inline-flex size-7 items-center justify-center rounded-full border border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Buka ${project.name}`} title="Buka Project"><ArrowUpRight class="size-3.5" aria-hidden="true" /></Link>
+                            <td class="border-l border-border/60 px-3 py-2.5"><span class="inline-flex min-h-7 max-w-44 items-center rounded-full border border-border/70 px-2.5 py-0.5 text-xs leading-4 text-muted-foreground"><span class="truncate">{project.unit?.name ?? '—'}</span></span></td>
+                            <td class="border-l border-border/60 px-3 py-2.5"><span class="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-medium leading-4 {visibilityClass(project.visibility)}"><span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>{project.visibility_label}</span></td>
+                            <td class="border-l border-border/60 px-3 py-2.5 text-muted-foreground"><div class="flex items-center gap-1.5 whitespace-nowrap text-xs"><CalendarDays class="size-3.5" aria-hidden="true" />{project.target_date ?? 'Tanpa target'}</div></td>
+                            <td class="border-l border-border/60 px-3 py-2.5 text-center">
+                                <div class="flex items-center justify-center gap-1">
+                                    <Link href={toUrl(ProjectController.show({ workspace: workspace.id, project: project.id }))} class="inline-flex size-7 items-center justify-center rounded-full border border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Buka ${project.name}`} title="Buka Project"><ArrowUpRight class="size-3.5" aria-hidden="true" /></Link>
+                                    {#if showArchived}
+                                        <Form {...ProjectArchiveController.restore.form({ workspace: workspace.id, project: project.id })} options={{ preserveScroll: true }}>
+                                            {#snippet children({ processing })}
+                                                <button type="submit" class="inline-flex size-7 items-center justify-center rounded-full border border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50" aria-label={`Pulihkan ${project.name}`} title="Pulihkan Project" disabled={processing}><Reset class="size-3.5" aria-hidden="true" /></button>
+                                            {/snippet}
+                                        </Form>
+                                    {/if}
+                                </div>
                             </td>
                         </tr>
                     {/snippet}

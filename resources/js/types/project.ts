@@ -2,11 +2,13 @@ export type ProjectPerson = {
     id: number;
     name: string;
     email?: string;
+    avatar?: string | null;
 };
 
 export type ProjectSummary = {
     id: string;
     name: string;
+    icon: string;
     identifier: string;
     unit: { id: string; name: string } | null;
     project_lead: ProjectPerson | null;

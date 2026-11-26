@@ -39,7 +39,6 @@ class TaskFactory extends Factory
             'completion_note' => null,
             'evidence_url' => null,
             'completed_at' => null,
-            'parent_task_id' => null,
             'milestone_id' => null,
         ];
     }

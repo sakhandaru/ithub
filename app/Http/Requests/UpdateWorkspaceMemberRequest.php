@@ -8,6 +8,7 @@ use App\Models\WorkspaceMembership;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UpdateWorkspaceMemberRequest extends FormRequest
 {
@@ -39,5 +40,14 @@ class UpdateWorkspaceMemberRequest extends FormRequest
             'role.required' => 'Role login wajib dipilih.',
             'role.enum' => 'Role login tidak valid.',
         ];
+    }
+
+    protected function passedValidation(): void
+    {
+        if ($this->string('role')->toString() === SystemRole::Admin->value && ! $this->user()?->isAdmin()) {
+            throw ValidationException::withMessages([
+                'role' => 'Hanya Admin sistem yang dapat memberikan role Admin.',
+            ]);
+        }
     }
 }

@@ -19,7 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'project_id', 'number', 'identifier', 'title', 'description', 'expected_outcome', 'status', 'priority',
     'assignee_id', 'requester_id', 'created_by_id', 'start_date', 'due_date', 'blocked_reason',
     'canceled_reason', 'reopen_reason', 'completion_note', 'evidence_url', 'completed_at',
-    'parent_task_id', 'milestone_id',
+    'milestone_id',
+    'module_id', 'release_id',
 ])]
 class Task extends Model
 {
@@ -61,22 +62,22 @@ class Task extends Model
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
-    /** @return BelongsTo<Task, $this> */
-    public function parentTask(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'parent_task_id');
-    }
-
-    /** @return HasMany<Task, $this> */
-    public function subtasks(): HasMany
-    {
-        return $this->hasMany(self::class, 'parent_task_id');
-    }
-
     /** @return BelongsTo<Milestone, $this> */
     public function milestone(): BelongsTo
     {
         return $this->belongsTo(Milestone::class);
+    }
+
+    /** @return BelongsTo<Module, $this> */
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
+    }
+
+    /** @return BelongsTo<Release, $this> */
+    public function release(): BelongsTo
+    {
+        return $this->belongsTo(Release::class);
     }
 
     /** @return HasMany<TaskRelation, $this> */

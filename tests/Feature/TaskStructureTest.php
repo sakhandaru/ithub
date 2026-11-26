@@ -3,8 +3,6 @@
 use App\Actions\Projects\CreateProject;
 use App\Actions\Tasks\CreateTask;
 use App\Actions\Workspaces\CreateWorkspace;
-use App\Models\Milestone;
-use App\Models\Task;
 use App\Models\TaskRelation;
 use App\Models\User;
 
@@ -19,29 +17,6 @@ function structureContext(): array
 
     return [$owner, $workspace, $project];
 }
-
-test('a project admin can create milestones and nested subtasks', function () {
-    [$owner, $workspace, $project] = structureContext();
-    $milestone = Milestone::factory()->create(['project_id' => $project->id]);
-    $parent = app(CreateTask::class)->handle($owner, $project, ['title' => 'Parent']);
-
-    $response = $this->actingAs($owner)->post(route('workspaces.projects.tasks.store', [$workspace, $project]), [
-        'title' => 'Child', 'parent_task_id' => $parent->id, 'milestone_id' => $milestone->id,
-    ]);
-
-    $response->assertRedirect();
-    $child = Task::query()->where('title', 'Child')->firstOrFail();
-    expect($child->parent_task_id)->toBe($parent->id)->and($child->milestone_id)->toBe($milestone->id);
-});
-
-test('task hierarchy rejects self reference and cycles', function () {
-    [$owner, $workspace, $project] = structureContext();
-    $parent = app(CreateTask::class)->handle($owner, $project, ['title' => 'Parent']);
-    $child = app(CreateTask::class)->handle($owner, $project, ['title' => 'Child', 'parent_task_id' => $parent->id]);
-
-    $this->actingAs($owner)->patch(route('workspaces.projects.tasks.update', [$workspace, $project, $parent]), ['parent_task_id' => $parent->id])->assertSessionHasErrors('parent_task_id');
-    $this->actingAs($owner)->patch(route('workspaces.projects.tasks.update', [$workspace, $project, $parent]), ['parent_task_id' => $child->id])->assertSessionHasErrors('parent_task_id');
-});
 
 test('project admins can add and remove task relations', function () {
     [$owner, $workspace, $project] = structureContext();

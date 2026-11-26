@@ -21,7 +21,7 @@ class ProjectSettingsController extends Controller
     public function show(Workspace $workspace, Project $project): Response
     {
         Gate::authorize('view', $project);
-        $project->load(['unit', 'memberships.user']);
+        $project->load(['unit', 'memberships.user:id,name,email,avatar']);
         $auditLogs = Gate::allows('update', $project)
             ? $project->auditLogs()->with('actor')->latest('created_at')->get()
             : collect();
@@ -34,14 +34,15 @@ class ProjectSettingsController extends Controller
                 'archived' => $project->isArchived(),
             ],
             'units' => $workspace->units()->orderBy('name')->get(['id', 'name']),
-            'members' => $workspace->memberships()->with('user')->orderBy('joined_at')->get()->map(fn ($membership): array => [
+            'members' => $workspace->memberships()->with('user:id,name,email,avatar')->orderBy('joined_at')->get()->map(fn ($membership): array => [
                 'id' => $membership->user->id,
                 'name' => $membership->user->name,
                 'email' => $membership->user->email,
+                'avatar' => $membership->user->avatar,
             ])->values(),
             'projectMembers' => $project->memberships->map(fn (ProjectMembership $membership): array => [
                 'id' => $membership->id,
-                'user' => $membership->user->only(['id', 'name', 'email']),
+                'user' => $membership->user->only(['id', 'name', 'email', 'avatar']),
                 'role' => ProjectRole::from((string) $membership->getRawOriginal('role'))->value,
                 'role_label' => ProjectRole::from((string) $membership->getRawOriginal('role'))->label(),
                 'joined_at' => CarbonImmutable::parse((string) $membership->getRawOriginal('joined_at'))->toIso8601String(),

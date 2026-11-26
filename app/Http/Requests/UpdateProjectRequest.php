@@ -36,7 +36,7 @@ class UpdateProjectRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:10000'],
             'visibility' => ['required', Rule::enum(ProjectVisibility::class)],
             'status' => ['required', Rule::enum(ProjectStatus::class)],
-            'project_lead_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'project_lead_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'default_assignee_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'start_date' => ['nullable', 'date'],
             'target_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -76,7 +76,6 @@ class UpdateProjectRequest extends FormRequest
             'unit_id.exists' => 'Unit yang dipilih tidak ditemukan.',
             'visibility.enum' => 'Visibility Project tidak valid.',
             'status.enum' => 'Status Project tidak valid.',
-            'project_lead_id.required' => 'Project Lead wajib dipilih.',
             'target_date.after_or_equal' => 'Target selesai tidak boleh sebelum tanggal mulai.',
         ];
     }

@@ -17,12 +17,7 @@ final class UpdateTask
     {
         return DB::transaction(function () use ($actor, $task, $attributes): Task {
             $before = $task->only(array_keys($attributes));
-            $labelIds = $attributes['label_ids'] ?? null;
-            unset($attributes['label_ids']);
             $task->update($attributes);
-            if ($labelIds !== null) {
-                $task->labels()->sync($labelIds);
-            }
 
             $this->recordAuditLog->handle(
                 auditable: $task,

@@ -11,5 +11,6 @@ test('global search only returns objects in the active workspace scope', functio
     $project = app(CreateProject::class)->handle($owner, $workspace, ['name' => 'Portal', 'identifier' => 'PORTAL', 'unit_id' => $workspace->units->first()->id, 'visibility' => 'workspace', 'status' => 'active']);
     app(CreateTask::class)->handle($owner, $project, ['title' => 'Deploy portal']);
 
-    $this->actingAs($owner)->get(route('search', ['q' => 'portal']))->assertOk()->assertInertia(fn ($page) => $page->component('Search')->has('projects', 1)->has('tasks', 1));
+    $this->actingAs($owner)->get(route('search', ['q' => 'portal']))->assertRedirect(route('dashboard'));
+    $this->actingAs($owner)->getJson(route('search', ['q' => 'portal']))->assertOk()->assertJsonCount(1, 'projects')->assertJsonCount(1, 'tasks');
 });
